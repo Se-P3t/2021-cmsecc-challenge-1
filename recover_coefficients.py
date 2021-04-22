@@ -94,8 +94,8 @@ def is_linear_independent(vectors, vec):
 if (args.category is None) or (args.level is None):
     if not args.experiment:
         raise ValueError("Undefined behavior")
-    #COEFFS = [random.randint(0, m-1) for _ in range(n)]
-    COEFFS = [509369830, 464884724]
+    COEFFS = [random.randint(0, m-1) for _ in range(n)]
+    #COEFFS = [509369830, 464884724]
     INIT_STATE = [random.randint(0, m-1) for _ in range(n)]
     if VERBOSE >= 1:
         print(f"coefficients: {COEFFS}")
@@ -234,7 +234,7 @@ for i in range(B.nrows):
         #print(i, sum(e*e for e in eta), (eta[0]+sum(eta[j-(n-1)]*q_[j][0] for j in range(n, r)))%m)
     #if any(abs(b_i) > BB for b_i in eta):
     #    continue
-    if (eta[0]+sum(eta[j]*q_[j][0] for j in range(n, r)))%m == 0:
+    if (eta[idx]+sum(eta[j]*q_[j][idx] for j in range(n, r)))%m == 0:
     #if (eta[0]+sum(eta[j-(n-1)]*q_[j][0] for j in range(n, r)))%m == 0:
         #vec = [eta[idx]] + eta[n:r]
         vec = tuple(eta)

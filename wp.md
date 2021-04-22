@@ -46,7 +46,7 @@ $$
 
 $Y_i = (y_i, y_{i+1}, \ldots, y_{i+t-1}), i = 0, \ldots, {r-1}, t < r$
 
-there exists $\vec{\eta}$ s.t. $\sum_{i=0}^{r-1} \eta_i Y_i = 0$ (SIS)
+there exists $\vec{\eta}$ s.t. $\sum_{i=0}^{r-1} \eta_i Y_i = 0$ (kernel lattice)
 
 define $A_i = (a_i, a_{i+1}, \ldots, a_{i+t-1})$, let $U = \sum_{i=0}^{r-1} \eta_i A_i$, we have
 
@@ -57,19 +57,21 @@ $$
 where $Z_i = (z_i, z_{i+1}, \ldots, z_{i+t-1})$. (bounded by $2^k$)
 
 $$
+\begin{aligned}
 \left(\begin{matrix}
 a_i \\ \vdots \\ a_{i+n-1} \\ k_{i+n} \\ \vdots \\ k_{i+t-1}
-\end{matrix}\right)^T \cdot
-\left(\begin{matrix}
+\end{matrix}\right)^T
+&\cdot \left(\begin{matrix}
 &1 & & &q_{n,0} &\cdots &q_{t-1,0} \\
 & &\ddots & &\vdots &\cdots &\vdots \\
 & & &1 &q_{n,n-1} &\cdots &q_{t-1,n-1} \\
 & & & &m & & \\
 & & & & &\ddots & \\
 & & & & & &m \\
-\end{matrix}\right) =
-\left(a_i, \ldots, a_{i+n-1}, a_{i+n}, \ldots, a_{i+t-1} \right) = 
-A_i
+\end{matrix}\right) \\
+&= \left(\begin{matrix} a_i &\ldots &a_{i+n-1} &a_{i+n} &\ldots &a_{i+t-1} \end{matrix}\right) \\
+&= A_i
+\end{aligned}
 $$
 
 $A_i \in L \longrightarrow U \in L$
