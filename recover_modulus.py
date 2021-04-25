@@ -85,17 +85,18 @@ SIEVE = args.sieve
 SEED = args.seed or int.from_bytes(os.urandom(8), 'big')
 if VERBOSE >= 1:
     print(f"SEED: {SEED}\n")
+    print()
 random.seed(SEED)
 
 idx = 0
 
-def is_linear_independent(vectors, vec):
-    _, indexes = Matrix(list(vectors)+[vec]).T.rref()
-    return len(indexes) == len(vectors)+1
-
-def rank(vectors):
-    _, indexes = Matrix(vectors).T.rref()
-    return len(indexes)
+# def is_linear_independent(vectors, vec):
+#     _, indexes = Matrix(list(vectors)+[vec]).T.rref()
+#     return len(indexes) == len(vectors)+1
+# 
+# def rank(vectors):
+#     _, indexes = Matrix(vectors).T.rref()
+#     return len(indexes)
 
 def det(vectors):
     A = Matrix(vectors)
@@ -116,6 +117,7 @@ if (args.category is None) or (args.level is None):
         print(f"modulus: {m}")
         print(f"coefficients: {COEFFS}")
         print(f"initial state: {INIT_STATE}")
+        print()
     STATE = copy(INIT_STATE)
     for j in range(n, N):
         a_j = sum(c_i*a_i for c_i, a_i in zip(COEFFS, STATE[-n:])) % m
@@ -152,11 +154,13 @@ if (args.category is None) or (args.level is None):
 
 else:
     y_ = read_data(args.category, args.level)
-    if len(y_) < r+t-1:
-        raise ValueError(f"outputs is not enough (got {len(y_)}, expect >={r+t-1})")
+    N = len(y_)
+    if N < r+t-1:
+        raise ValueError(f"outputs is not enough (got {N}, expect >={r+t-1})")
     SOL = None
+    
 
-    raise NotImplementedError
+    #raise NotImplementedError
 
 
 
@@ -167,11 +171,18 @@ KK = math.ceil(math.sqrt(r)*2**((r-1.0)/2) * BB)
 
 groups = N-(r+t-2)
 full_rank = r-n+1
-vectors_per_group = math.ceil(full_rank*1.0 / groups)
+vectors_per_group = 3
+
+if VERBOSE >= 1:
+    print(f"groups: {groups}")
+    print(f"full_rank: {full_rank}")
+    print()
 
 ETA = []
 
-for offset in range(0, groups, 10):
+while True:
+    offset = random.randint(0, groups-1)
+
     # build basis matrix
     M = [[0]*(t+r) for _ in range(r)]
     for i in range(r):
@@ -185,7 +196,7 @@ for offset in range(0, groups, 10):
     # BKZ
     B = IntegerMatrix.from_matrix(M)
     flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
-    if DEBUG or VERBOSE >= 5:
+    if VERBOSE >= 5:
         flags |= BKZ.VERBOSE
     BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=flags))
 
@@ -195,14 +206,15 @@ for offset in range(0, groups, 10):
     count = 0
     for i in range(B.nrows):
         b = list(B[i])
-        if any(b_i != 0 for b_i in  b[:t]):
-            continue
+        if any(b_i != 0 for b_i in b[:t]):
+            break
         eta = list(b[t:])
 
-        if SOL is not None and VERBOSE >= 3:
-            print(i, sum(e*e for e in eta), sum(e*a for e, a in zip(eta, STATE[offset:])), (eta[idx]+sum(eta[j]*q_[j][idx] for j in range(n, r)))%m)
-        else:
-            print(i, sum(e*e for e in eta))
+        if VERBOSE >= 100 or DEBUG:
+            if SOL is not None:
+                print(f"{i+1}/{B.nrows}", sum(e*e for e in eta), sum(e*a for e, a in zip(eta, STATE[offset:])), (eta[idx]+sum(eta[j]*q_[j][idx] for j in range(n, r)))%m)
+            else:
+                print(f"{i+1}/{B.nrows}", sum(e*e for e in eta))
 
         if SOL is not None:
             if (eta[idx]+sum(eta[j]*q_[j][idx] for j in range(n, r)))%m == 0:
@@ -213,6 +225,19 @@ for offset in range(0, groups, 10):
                 ETA.append(eta)
                 count += 1
 
+    if ETA:
+        ETA_m = IntegerMatrix.from_matrix(ETA, int_type='mpz')
+        LLL.reduction(ETA_m)
+        ETA = [list(b) for b in ETA_m if any(list(b))]
+
+    if VERBOSE < 5:
+        print(f"\roffset = {offset} :: rank(ETA) = {len(ETA)}/{full_rank}", end='')
+
+    if len(ETA) >= full_rank:
+        break
+
+if VERBOSE < 5:
+    print()
 
 
 
@@ -233,7 +258,7 @@ BKZ.reduction(B, BKZ.EasyParam(block_size=args.block_size, flags=flags))
 M = []
 for b in B:
     b = list(b)
-    if sum(b) == 0:
+    if not any(b):
         continue
     row = b[:2] + [bi//KK for bi in b[2:]]
     M.append(row)
