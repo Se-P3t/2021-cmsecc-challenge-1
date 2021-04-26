@@ -218,7 +218,12 @@ if DEBUG and input('embed? '):
 
 a_ = find_solution(B)
 if SOL is None and a_:
-    save_solution(args.category, args.level, {'initial_state': a_})
+    data = {
+        'modulus': m,
+        'coefficients': coeffs,
+        'initial_state': a_,
+    }
+    save_solution(args.category, args.level, data)
     exit(0)
 
 ########## sieve ##########
@@ -247,7 +252,12 @@ if DEBUG and input('embed? '):
 
 a_ = find_solution(B)
 if SOL is None and a_:
-    save_solution(args.category, args.level, {'initial_state': a_})
+    data = {
+        'modulus': m,
+        'coefficients': coeffs,
+        'initial_state': a_,
+    }
+    save_solution(args.category, args.level, data)
     exit(0)
 
 
