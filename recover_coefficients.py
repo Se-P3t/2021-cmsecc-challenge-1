@@ -143,120 +143,24 @@ else:
     raise NotImplementedError
 
 
-########## build basis matrix ##########
 MM = 1 << (mbits - zbits)
 BB = math.ceil((2*MM*r)**(1.0*t/(r-t)))
 KK = math.ceil(math.sqrt(r)*2**((r-1.0)/2) * BB)
+full_rank = r-n+1
 
-
-#M = [[0]*(t+r) for _ in range(t+r)]
-#for i in range(t):
-#    M[i][i] = m *KK
-#for i in range(r):
-#    for j in range(t):
-#        M[t+i][j] = y_[i+j] *KK
-#    M[t+i][t+i] = 1
-M = [[0]*(t+r) for _ in range(r)]
-for i in range(r):
-    for j in range(t):
-        M[i][j] = y_[i+j] *KK
-    M[i][t+i] = 1
-
-#M = [
-#    vec[:t] + [vec[t+idx]] + vec[t+n:t+r]
-#    for vec in M
-#]
-
-random.seed(SEED)
-random.shuffle(M)
-if VERBOSE >= 100: # rm
-    random.seed(SEED)
-    index = list(range(r))
-    random.shuffle(index)
-    print(f"shuffle: {index}")
-    matrix_overview(M)
-
-
-########## BKZ ##########
-B = IntegerMatrix.from_matrix(M)
-#"""
-flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
-if DEBUG or VERBOSE >= 5:
-    flags |= BKZ.VERBOSE
-BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=flags))
-
-if DEBUG or VERBOSE >= 3:
-    matrix_overview(B)
-
-if DEBUG and input('embed? '):
-    IPython.embed()
-"""
-B = solve_asvp(
-    B,
-    threads=THREADS,
-    verbose=(DEBUG or VERBOSE >= 2),
-    seed=SEED,
-    step_size=args.step_size,
-    workout__dim4free_dec=args.workout__dim4free_dec,
-    goal_r0__gh=args.goal_r0__gh
-)
-"""
-
-"""
-M = [
-    list(b)[t:] for b in B if not any(list(b)[:t])
-]
-
-B = IntegerMatrix.from_matrix(M)
-flags = BKZ.DEFAULT
-if DEBUG or VERBOSE >= 5:
-    flags |= BKZ.VERBOSE
-BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=flags))
-
-if DEBUG or VERBOSE >= 3:
-    matrix_overview(B)
-
-
-if DEBUG and input('embed? '):
-    IPython.embed()
-"""
-
-#ETA = [tuple([m]+[0]*(r-n))]
 ETA = []
-for i in range(B.nrows):
-    b = list(B[i])
-    if any(b_i != 0 for b_i in  b[:t]):
-        continue
-    eta = list(b[t:])
-    #eta = b
-    if SOL is not None and VERBOSE >= 3:
-        print(i, sum(e*e for e in eta), sum(e*a for e, a in zip(eta, STATE)), [(eta[i]+sum(eta[j]*q_[j][i] for j in range(n, r)))%m for i in range(n)])
-        #print(i, sum(e*e for e in eta), (eta[0]+sum(eta[j-(n-1)]*q_[j][0] for j in range(n, r)))%m)
-    #if any(abs(b_i) > BB for b_i in eta):
-    #    continue
-    if (eta[idx]+sum(eta[j]*q_[j][idx] for j in range(n, r)))%m == 0:
-    #if (eta[0]+sum(eta[j-(n-1)]*q_[j][0] for j in range(n, r)))%m == 0:
-        #vec = [eta[idx]] + eta[n:r]
-        vec = tuple(eta)
-        ETA.append(vec)
 
+while True:
+    zero_index = random.randint(0, r-1)
 
-"""
-MM = 1 << (mbits - zbits)
-BB = math.ceil((2*MM*r)**(1.0*t/(r-t)))
-
-for _ in range(3):
-    KK = math.ceil(math.sqrt(r)*2**((r-1.0)/2) * BB) * random.randint(2, 100)
     M = [[0]*(t+r) for _ in range(r)]
     for i in range(r):
         for j in range(t):
-            M[i][j] = y_[i+j] * KK
+            M[i][j] = y_[i+j] *KK
+            #M[i][j] = (2*y_[i+j]+1) *KK
         M[i][t+i] = 1
 
-    #M = [
-    #    vec[:t] + [vec[t+idx]] + vec[t+n:t+r]
-    #    for vec in M
-    #]
+    #M[zero_index][zero_index+t] = KK * m
 
     random.shuffle(M)
 
@@ -264,28 +168,51 @@ for _ in range(3):
     flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
     if DEBUG or VERBOSE >= 5:
         flags |= BKZ.VERBOSE
-    BKZ.reduction(B, BKZ.EasyParam(block_size=min(random.randint(2, B.nrows), args.block_size), flags=flags))
+    BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=flags))
+
+    if DEBUG or VERBOSE >= 3:
+        matrix_overview(B)
 
     for i in range(B.nrows):
         b = list(B[i])
         if any(b_i != 0 for b_i in  b[:t]):
             continue
         eta = list(b[t:])
+        #eta = b
         if SOL is not None and VERBOSE >= 3:
-            print(i, sum(e*e for e in eta), [(eta[i]+sum(eta[j]*q_[j][i] for j in range(n, r)))%m for i in range(n)])
+            print(i, (math.floor(m**(1-1.0*n/t)) >> zbits)**2, sum(e*e for e in eta), sum(e*a for e, a in zip(eta, STATE)), [(eta[i]+sum(eta[j]*q_[j][i] for j in range(n, r)))%m for i in range(n)])
             #print(i, sum(e*e for e in eta), (eta[0]+sum(eta[j-(n-1)]*q_[j][0] for j in range(n, r)))%m)
         #if any(abs(b_i) > BB for b_i in eta):
         #    continue
-        if (eta[0]+sum(eta[j]*q_[j][0] for j in range(n, r)))%m == 0:
-        #if ((eta[0]+sum(eta[j-(n-1)]*q_[j][0] for j in range(n, r)))%m == 0):
-            vec = [eta[idx]] + eta[n:r]
-            #if is_linear_independent(ETA, vec):
+        if (eta[idx]+sum(eta[j]*q_[j][idx] for j in range(n, r)))%m == 0:
+        #if (eta[0]+sum(eta[j-(n-1)]*q_[j][0] for j in range(n, r)))%m == 0:
+            #vec = [eta[idx]] + eta[n:r]
+            vec = tuple(eta)
             ETA.append(vec)
 
-        print(len(ETA))
-"""
+    if ETA:
+        ETA_m = IntegerMatrix.from_matrix(ETA, int_type='mpz')
+        LLL.reduction(ETA_m)
+        ETA = [list(b) for b in ETA_m if any(list(b))]
 
-"""
+    break
+
+    if VERBOSE < 5:
+        print(f"offset = {zero_index} :: rank(ETA) = {len(ETA)}/{full_rank}")
+
+    if len(ETA) >= full_rank:
+        break
+
+    if input("> "):
+        break
+
+if VERBOSE < 5:
+    print()
+
+
+
+
+#"""
 if len(ETA) < r-n+1:
     print(f"eta not enough, expect {r-n+1} got {len(ETA)}")
     if DEBUG:
@@ -313,7 +240,7 @@ if DEBUG or VERBOSE >= 3:
 
 if DEBUG and input('embed? '):
     IPython.embed()
-"""
+#"""
 
 """
 d = len(ETA)

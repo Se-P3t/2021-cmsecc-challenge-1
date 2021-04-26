@@ -6,3 +6,4 @@ svpchallenge
 *.pyc
 *.sage.py
 *.mat
+~*.md

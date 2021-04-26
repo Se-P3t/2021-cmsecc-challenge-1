@@ -44,6 +44,8 @@ $$
 
 
 
+
+
 $Y_i = (y_i, y_{i+1}, \ldots, y_{i+t-1}), i = 0, \ldots, {r-1}, t < r$
 
 there exists $\vec{\eta}$ s.t. $\sum_{i=0}^{r-1} \eta_i Y_i = 0$ (kernel lattice)
@@ -78,9 +80,19 @@ $A_i \in L \longrightarrow U \in L$
 
 if $||U||_2 < \lambda_1(L)$, then $U = \vec{0} = \sum_{i=0}^{r-1} \eta_i A_i$
 
-$||U|| < \sqrt{r} 2^k ||\vec\eta||$, $\lambda_1(L) \approx \sqrt{\frac{t}{2\pi e}}det(L)^{1/t} = O(m^{1-n/t})$
+$||U|| < \sqrt{rt} 2^k ||\vec\eta||$, $\lambda_1(L) \approx \sqrt{\frac{t}{2\pi e}}det(L)^{1/t} = O(m^{1-n/t})$
 
 
+
+improve: set $Y_i' := 2Y_i + 1$, then $U = \sum_i \eta_i A_i = 2^{k-1} \sum_i \eta_i Y_i' + \sum_i \eta_i (Z_i - 2^{k-1})$. since $||Z_i-2^{k-1}|| < \sqrt{rt} 2^{k-1}$
+
+
+
+**problem**: in category 2, we're given exactly $r+t-1$ $y_i$'s, which is impossible to reach full rank: in the kernel lattice, we can get at most $r-t$ rows with leading zeros, even if they all satisfy $U_i = \sum_i \eta_i A_i = 0$, we still need more to make $L(g_i)^* = L(g_i)$. Moreover, we did not use $m$.
+
+**problem**: the bound for $||\eta||$ is too ambiguous.
+
+we need NEW idea
 
 
 
