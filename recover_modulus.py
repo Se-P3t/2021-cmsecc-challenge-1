@@ -149,14 +149,14 @@ if (args.category is None) or (args.level is None):
         Qj %= m
 
 else:
+    if not DEBUG:
+        raise NotImplementedError("unfinished")
     y_ = read_data(args.category, args.level)
     N = len(y_)
     if N < r+t-1:
         raise ValueError(f"outputs is not enough (got {N}, expect >={r+t-1})")
     SOL = None
-    
 
-    #raise NotImplementedError
 
 
 
@@ -212,12 +212,13 @@ while True:
             else:
                 print(f"{i+1}/{B.nrows}", sum(e*e for e in eta))
 
+        # TODO: bound check
         if SOL is not None:
             if (eta[idx]+sum(eta[j]*q_[j][idx] for j in range(n, r)))%m == 0:
-                if 1:# offset == 0 or is_linear_independent(ETA, eta):
+                if 1:
                     ETA.append(eta)
         else:
-            if count < vectors_per_group:# and is_linear_independent(ETA, eta):
+            if count < vectors_per_group:
                 ETA.append(eta)
                 count += 1
 
