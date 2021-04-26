@@ -93,10 +93,6 @@ idx = 0
 # def is_linear_independent(vectors, vec):
 #     _, indexes = Matrix(list(vectors)+[vec]).T.rref()
 #     return len(indexes) == len(vectors)+1
-# 
-# def rank(vectors):
-#     _, indexes = Matrix(vectors).T.rref()
-#     return len(indexes)
 
 def det(vectors):
     A = Matrix(vectors)

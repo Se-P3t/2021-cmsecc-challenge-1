@@ -5,3 +5,4 @@ svpchallenge
 
 *.pyc
 *.sage.py
+*.mat
