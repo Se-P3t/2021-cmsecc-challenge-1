@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 import re
+import json
 import subprocess
 from random import SystemRandom
 from collections import OrderedDict
@@ -77,9 +78,8 @@ def read_data(category, level):
 
 
 def save_solution(category, level, data):
-    with open(f"solutions/sol-{category}-{level}.txt", 'w') as f:
-        for d in data:
-            f.write(f"{d}\n")
+    with open(f"solutions/sol-{category}-{level}.json", 'w') as f:
+        f.write(json.dumps(data))
 
 
 def matrix_overview(BB):
