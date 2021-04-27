@@ -4,8 +4,9 @@ G6K Approx-SVP Solver
 References:
     g6k/svp_challenge.py
 """
-__all__ = ['solve_asvp']
 
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
 import copy
@@ -22,8 +23,13 @@ from g6k.utils.stats import SieveTreeTracer
 from g6k.utils.util import load_matrix_file, db_stats
 from g6k.utils.util import sanitize_params_names
 
+import six
+from six.moves import range
+
 from util import str_mat, print_stats
 
+
+__all__ = ['solve_asvp']
 
 
 def asvp_kernel(arg0, params=None, seed=None):
@@ -91,7 +97,7 @@ def asvp(n, params, threads, **kwds):
                     workers=workers,
                     seed=seed)
 
-    inverse_all_params = OrderedDict([(v, k) for (k, v) in all_params.items()])
+    inverse_all_params = OrderedDict([(v, k) for (k, v) in six.iteritems(all_params)])
     stats = sanitize_params_names(stats, inverse_all_params)
 
     fmt = "{name:20s} :: n: {n:2d}, cputime {cputime:7.4f}s, walltime: {walltime:7.4f}s, "\
@@ -145,7 +151,7 @@ def solve_asvp(A, **kwds):
 
     if keep_tmpfile:
         with open(load_matrix, 'w') as f:
-            f.write(str(res))
+            f.write(str_mat(res))
     else:
         os.system(f'rm -f {load_matrix}')
 

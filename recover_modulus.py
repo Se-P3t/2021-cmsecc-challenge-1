@@ -4,6 +4,7 @@ recover modulus
 """
 
 import os
+import sys
 import math
 import random
 import argparse
@@ -16,6 +17,7 @@ from fpylll import FPLLL, IntegerMatrix, BKZ, LLL
 
 from util import read_data, save_solution, matrix_overview, str_mat
 from sieve_asvp import solve_asvp
+from sieve_bkz import solve_bkz
 
 
 parser = argparse.ArgumentParser(description=__doc__,
@@ -84,7 +86,7 @@ THREADS = args.threads
 SIEVE = args.sieve
 SEED = args.seed or int.from_bytes(os.urandom(8), 'big')
 if VERBOSE >= 1:
-    print(f"SEED: {SEED}\n")
+    print(f"SEED: {SEED}")
     print()
 random.seed(SEED)
 
@@ -149,8 +151,8 @@ if (args.category is None) or (args.level is None):
         Qj %= m
 
 else:
-    if not DEBUG:
-        raise NotImplementedError("unfinished")
+    #if not DEBUG:
+    #    raise NotImplementedError("unfinished")
     y_ = read_data(args.category, args.level)
     N = len(y_)
     if N < r+t-1:
@@ -164,19 +166,22 @@ else:
 MM = 1 << (mbits - zbits)
 BB = math.ceil((2*MM*r)**(1.0*t/(r-t)))
 KK = math.ceil(math.sqrt(r)*2**((r-1.0)/2) * BB)
+KK_1 = math.ceil(10 * 2**mbits * 2**((r-n)/2))
 
 groups = N-(r+t-2)
 full_rank = r-n+1
-vectors_per_group = 3
+vectors_per_group = 5
 
 if VERBOSE >= 1:
     print(f"groups: {groups}")
     print(f"full_rank: {full_rank}")
     print()
 
-ETA = []
 
+data = []
+count = 0
 while True:
+    count += 1
     offset = random.randint(0, groups-1)
 
     # build basis matrix
@@ -186,7 +191,6 @@ while True:
             M[i][j] = y_[offset+i+j] *KK
         M[i][t+i] = 1
 
-    random.seed(SEED)
     random.shuffle(M)
 
     # BKZ
@@ -195,11 +199,16 @@ while True:
     if VERBOSE >= 5:
         flags |= BKZ.VERBOSE
     BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=flags))
+    #B = solve_bkz(
+    #    M,
+    #    threads=THREADS,
+    #    blocksizes=f"2:{args.block_size}:2",
+    #    verbose=(VERBOSE >= 5),
+    #)
 
     #if DEBUG or VERBOSE >= 3:
     #    matrix_overview(B)
 
-    count = 0
     for i in range(B.nrows):
         b = list(B[i])
         if any(b_i != 0 for b_i in b[:t]):
@@ -214,61 +223,126 @@ while True:
 
         # TODO: bound check
         if SOL is not None:
-            if (eta[idx]+sum(eta[j]*q_[j][idx] for j in range(n, r)))%m == 0:
-                if 1:
-                    ETA.append(eta)
+            data.append({
+                'row': i,
+                'eta': tuple(eta),
+                'norm': sum(e*e for e in eta),
+                'valid': sum(e*a for e, a in zip(eta, STATE[offset:])) == 0,
+            })
+            #if (eta[idx]+sum(eta[j]*q_[j][idx] for j in range(n, r)))%m == 0:
+            #    if 1:
+            #        ETA.append(eta)
         else:
-            if count < vectors_per_group:
-                ETA.append(eta)
-                count += 1
+            data.append({
+                'row': i,
+                'eta': tuple(eta),
+                'norm': sum(e*e for e in eta),
+            })
+            #if count < vectors_per_group:
+            #    ETA.append(eta)
+            #    count += 1
+            #else:
+            #    break
 
-    if ETA:
-        ETA_m = IntegerMatrix.from_matrix(ETA, int_type='mpz')
-        LLL.reduction(ETA_m)
-        ETA = [list(b) for b in ETA_m if any(list(b))]
 
-    if VERBOSE < 5:
-        print(f"\roffset = {offset} :: rank(ETA) = {len(ETA)}/{full_rank}", end='')
+    ETA = []
+    data = sorted(data, key=lambda x: x['norm'])
+    norm_min = data[0]['norm']
+    for d in data:
+        if d['norm'] > 2 * norm_min:
+            break
+        if d['row'] > 3 * args.block_size:
+            continue
+        ETA.append(d['eta'])
 
-    if len(ETA) >= full_rank:
+    if DEBUG and args.experiment and count > 5:
         break
 
-if VERBOSE < 5:
-    print()
+    ETA_m = IntegerMatrix.from_matrix(ETA, int_type='mpz')
+    LLL.reduction(ETA_m)
+    ETA = [list(b) for b in ETA_m if any(list(b))]
 
+    if VERBOSE < 5:
+        print(f"\rLOOP({count}) offset = {offset:3d} :: rank(ETA) = {len(ETA):3d}/{r}", end='')
+        sys.stdout.flush()
 
-
-KK = math.ceil(100 * m * 2**((r-n)/2))
-
-M = []
-for eta in ETA:
-    row = [eta[idx], eta[n]] + [e *KK for e in eta[n+1:r]]
-    M.append(row)
-
-
-B = IntegerMatrix.from_matrix(M)
-flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
-if DEBUG or VERBOSE >= 5:
-    flags |= BKZ.VERBOSE
-BKZ.reduction(B, BKZ.EasyParam(block_size=args.block_size, flags=flags))
-
-M = []
-for b in B:
-    b = list(b)
-    if not any(b):
+    if len(ETA) < r:
         continue
-    row = b[:2] + [bi//KK for bi in b[2:]]
-    M.append(row)
 
-if DEBUG or VERBOSE >= 3:
-    matrix_overview(M)
+    M = []
+    for eta in ETA:
+        row = [eta[idx], eta[n]] + [e *KK_1 for e in eta[n+1:r]]
+        M.append(row)
 
-if len(M) == full_rank:
-    detM = det(M)
-    print(f"modulus = {detM}")
-    if not args.experiment:
-        with open(f"ETA-{args.category}-{args.level}.mat", 'w') as f:
-            f.write(str_mat(ETA))
+    B = IntegerMatrix.from_matrix(M)
+    LLL.reduction(B)
+
+    M = []
+    for b in B:
+        b = list(b)
+        if not any(b):
+            continue
+        row = b[:2] + [bi//KK_1 for bi in b[2:]]
+        M.append(row)
+
+    if DEBUG or VERBOSE >= 3:
+        matrix_overview(M)
+
+    if len(M) == full_rank:
+        detM = int(det(M))
+        print(f"modulus = {detM}")
+        if detM.bit_length() != mbits:
+            continue
+        if not args.experiment:
+            with open(f"ETA-{args.category}-{args.level}.mat", 'w') as f:
+                f.write(str_mat(ETA))
+        break
 
 if DEBUG and input('embed? '):
     IPython.embed()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+""" remove ?
+from sage.all import PolynomialRing, ZZ, Matrix
+
+PR = PolynomialRing(ZZ, names=[f"C{i}" for i in range(n)])
+varC_ = PR.gens()
+
+varQ = Matrix(PR, n)
+for i in range(n):
+    varQ[i, n-1] = varC_[i]
+    if i == 0:
+        continue
+    varQ[i, i-1] = 1
+
+varq_ = [None] * n
+
+varQj = varQ**n
+for j in range(n, r):
+    varq_.append(varQj[:, 0].T[0].list())
+    varQj *= varQ
+
+print('Q^j done')
+
+# for d in data:
+#     eta = d['eta']
+#     gi = PR(eta[i] + sum(eta[j]*varq_[j][i] for j in range(n, r)))
+#     d['poly'] = gi
+"""
+
+
+
+
