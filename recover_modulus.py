@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
 # chall params
 parser.add_argument('mbits', type=int, help="number of bits of the modulus")
-parser.add_argument('n', type=int, help="degree of feedback polynomial")
+parser.add_argument('n', type=int, help="degree of connection polynomial")
 parser.add_argument('r', type=int)
 parser.add_argument('t', type=int)
 parser.add_argument('zbits', type=int, help="number of bits of unknowns `z_i`")
@@ -200,12 +200,21 @@ while True:
     random.shuffle(M)
 
     B = IntegerMatrix.from_matrix(M)
+
     BKZ.reduction(
         B,
         BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=bkz_flags),
         float_type="mpfr",
         precision=100,
     )
+
+    #B = solve_asvp(
+    #    B,
+    #    threads=THREADS,
+    #    verbose=(VERBOSE >= 2),
+    #    goal_r0=args.goal_r0,
+    #)
+
     #B = solve_bkz(
     #    B,
     #    threads=THREADS,

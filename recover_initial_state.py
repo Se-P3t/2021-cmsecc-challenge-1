@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser(description=__doc__,
 # chall params
 parser.add_argument('m', type=int, help="modulus")
 parser.add_argument('coeffs', type=str, help="coefficients `c_0,c_1,...,c_{n-1}`"
-                    "of feedback polynomial (sep by comma)")
+                    "of connection polynomial (sep by comma)")
 parser.add_argument('d', type=int, help="number of outputs")
 parser.add_argument('zbits', type=int, help="number of bits of unknowns `z_i`")
 # basic args

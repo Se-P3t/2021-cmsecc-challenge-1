@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
 # chall params
 parser.add_argument('m', type=int, help="modulus")
-parser.add_argument('n', type=int, help="degree of feedback polynomial")
+parser.add_argument('n', type=int, help="degree of connection polynomial")
 parser.add_argument('r', type=int)
 parser.add_argument('t', type=int)
 parser.add_argument('zbits', type=int, help="number of bits of unknowns `z_i`")
@@ -213,11 +213,11 @@ if VERBOSE < 5:
 
 
 #"""
-if len(ETA) < r-n+1:
-    print(f"eta not enough, expect {r-n+1} got {len(ETA)}")
-    if DEBUG:
-        IPython.embed()
-    exit(-1)
+#if len(ETA) < r-n+1:
+#    print(f"eta not enough, expect {r-n+1} got {len(ETA)}")
+#    if DEBUG:
+#        IPython.embed()
+#    exit(-1)
 
 
 KK = math.ceil(100 * m * 2**((r-n)/2))
@@ -271,11 +271,10 @@ matrix_overview(B)
 IPython.embed()
 """
 
-"""
-from sage.all import PolynomialRing, Zmod, Matrix
-from sage.rings.polynomial.multi_polynomial_sequence import PolynomialSequence
 
-PR = PolynomialRing(Zmod(m), names=('C0', 'C1'))
+from sage.all import PolynomialRing, ZZ, Zmod, Matrix
+
+PR = PolynomialRing(ZZ, names=('C0', 'C1'))
 varC_ = PR.gens()
 
 varQ = Matrix(PR, n)
@@ -299,7 +298,19 @@ for eta in ETA:
         gi = PR(eta[i] + sum(eta[j]*varq_[j][i] for j in range(n, r)))
         polys.append(gi)
 
-F = PolynomialSequence(PR, polys)
+#F = PolynomialSequence(PR, polys)
+
+f1, f2, f3 = polys[:3]
+
+f1_2 = f1.resultant(f2, varC_[0])
+f2_3 = f2.resultant(f3, varC_[0])
+PRm = PolynomialRing(Zmod(m), 'C1')
+C1 = PRm.gens()[0]
+
+f1_2 = f1_2(0, C1)
+f2_3 = f2_3(0, C1)
+
+print(f1_2.gcd(f2_3))
 
 IPython.embed()
-"""
+
