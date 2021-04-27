@@ -12,24 +12,26 @@ import sys
 import copy
 from collections import OrderedDict
 
-from fpylll import IntegerMatrix
+from fpylll import IntegerMatrix, FPLLL
 from fpylll.util import gaussian_heuristic
 
-from g6k.algorithms.workout import workout
 from g6k.siever import Siever
 from g6k import SieverParams
 from g6k.utils.cli import run_all, pop_prefixed_params
 from g6k.utils.stats import SieveTreeTracer
-from g6k.utils.util import load_matrix_file, db_stats
+from g6k.utils.util import db_stats
 from g6k.utils.util import sanitize_params_names
 
 import six
 from six.moves import range
 
-from util import str_mat, print_stats
+from util import str_mat, print_stats, load_matrix_file
+from workout import workout
 
 
 __all__ = ['solve_asvp']
+
+# FPLLL.set_precision(100)
 
 
 def asvp_kernel(arg0, params=None, seed=None):
@@ -49,7 +51,7 @@ def asvp_kernel(arg0, params=None, seed=None):
     if verbose:
         workout_params["verbose"] = True
 
-    A, _ = load_matrix_file(load_matrix, randomize=(seed != -1), seed=seed, float_type="mpfr")
+    A, _ = load_matrix_file(load_matrix, randomize=(seed != -1), seed=seed, int_type="mpz", float_type="mpfr")
     if verbose:
         print(("Loaded file '%s'" % load_matrix))
 
@@ -57,9 +59,12 @@ def asvp_kernel(arg0, params=None, seed=None):
     tracer = SieveTreeTracer(g6k, root_label=("svp-challenge", n), start_clocks=True)
 
     gh = gaussian_heuristic([g6k.M.get_r(i, i) for i in range(n)])
-    goal_r0 = (goal_r0__gh**2) * gh
+    goal_r0 = workout_params.pop('goal_r0')
+
+    if goal_r0 == 0:
+        goal_r0 = (goal_r0__gh**2) * gh
     if verbose:
-        print(("gh = %f, goal_r0/gh = %f, r0/gh = %f" % (gh, goal_r0/gh, sum([x*x for x in A[0]])/gh)))
+        print(("gh = %f, goal_r0 = %f, r0 = %f" % (gh, goal_r0, sum([x*x for x in A[0]]))))
  
     flast = workout(g6k, tracer, 0, n, goal_r0=goal_r0, **workout_params)
 
@@ -136,12 +141,14 @@ def solve_asvp(A, **kwds):
     verbose = kwds.pop('verbose', True)
     workout__dim4free_dec = kwds.pop('workout__dim4free_dec', 3)
     goal_r0__gh = kwds.pop('goal_r0__gh', 1.05)
+    goal_r0 = kwds.pop("goal_r0", 0)
 
     params = SieverParams(threads=threads,
                           load_matrix=load_matrix,
                           verbose=verbose)
     params['workout/dim4free_dec'] = workout__dim4free_dec
     params['workout/save_prefix'] = f"/tmp/asvp-{n}"
+    params['workout/goal_r0'] = goal_r0
     params['goal_r0__gh'] = goal_r0__gh
 
     with open(load_matrix, 'w') as f:

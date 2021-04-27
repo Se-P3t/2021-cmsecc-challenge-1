@@ -152,7 +152,7 @@ def load_matrix_file(filepath, randomize=False, seed=None, int_type="long", floa
     :returns: lattice basis and BKZ object
     """
     A = IntegerMatrix.from_file(filepath)
-    A = LLL.reduction(A)
+    #A = LLL.reduction(A)
     A = IntegerMatrix.from_matrix(A, int_type=int_type)
 
     M = GSO.Mat(A, float_type=float_type)

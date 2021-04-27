@@ -51,11 +51,14 @@ parser.add_argument('-s', '--step-size', type=int, dest="step_size", default=2,
                     help="increment lattice dimension in these steps")
 parser.add_argument('--workout/dim4free-dec', type=int, dest="workout__dim4free_dec", default=3,
                     help="By how much do we decreaseee dim4free at each iteration")
-parser.add_argument('--goal-r0/gh', type=float, dest="goal_r0__gh", default=1.05,
+parser.add_argument('--goal-r0', type=float, dest="goal_r0", default=0,
                     help="Quit when this is reached")
 
 args, _ = parser.parse_known_args()
 
+
+
+FPLLL.set_precision(100)
 
 DEBUG = args.debug
 
@@ -90,7 +93,6 @@ if VERBOSE >= 1:
     print()
 random.seed(SEED)
 
-idx = 0
 
 # def is_linear_independent(vectors, vec):
 #     _, indexes = Matrix(list(vectors)+[vec]).T.rref()
@@ -168,6 +170,10 @@ BB = math.ceil((2*MM*r)**(1.0*t/(r-t)))
 KK = math.ceil(math.sqrt(r)*2**((r-1.0)/2) * BB)
 KK_1 = math.ceil(10 * 2**mbits * 2**((r-n)/2))
 
+bkz_flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
+if VERBOSE >= 5:
+    bkz_flags |= BKZ.VERBOSE
+
 groups = N-(r+t-2)
 full_rank = r-n+1
 vectors_per_group = 5
@@ -180,30 +186,31 @@ if VERBOSE >= 1:
 
 data = []
 count = 0
+pre_rank = 0
 while True:
     count += 1
     offset = random.randint(0, groups-1)
 
-    # build basis matrix
     M = [[0]*(t+r) for _ in range(r)]
     for i in range(r):
         for j in range(t):
-            M[i][j] = y_[offset+i+j] *KK
+            M[i][j] = (2*y_[offset+i+j]+1) *KK
         M[i][t+i] = 1
 
     random.shuffle(M)
 
-    # BKZ
     B = IntegerMatrix.from_matrix(M)
-    flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
-    if VERBOSE >= 5:
-        flags |= BKZ.VERBOSE
-    BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=flags))
+    BKZ.reduction(
+        B,
+        BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=bkz_flags),
+        float_type="mpfr",
+        precision=100,
+    )
     #B = solve_bkz(
-    #    M,
+    #    B,
     #    threads=THREADS,
-    #    blocksizes=f"2:{args.block_size}:2",
-    #    verbose=(VERBOSE >= 5),
+    #    verbose=(VERBOSE >= 2),
+    #    blocksizes=f"2:{args.block_size}:2"
     #)
 
     #if DEBUG or VERBOSE >= 3:
@@ -217,7 +224,7 @@ while True:
 
         if VERBOSE >= 100 or DEBUG:
             if SOL is not None:
-                print(f"{i+1}/{B.nrows}", sum(e*e for e in eta), sum(e*a for e, a in zip(eta, STATE[offset:])), (eta[idx]+sum(eta[j]*q_[j][idx] for j in range(n, r)))%m)
+                print(f"{i+1}/{B.nrows}", sum(e*e for e in eta), sum(e*a for e, a in zip(eta, STATE[offset:])))
             else:
                 print(f"{i+1}/{B.nrows}", sum(e*e for e in eta))
 
@@ -229,7 +236,7 @@ while True:
                 'norm': sum(e*e for e in eta),
                 'valid': sum(e*a for e, a in zip(eta, STATE[offset:])) == 0,
             })
-            #if (eta[idx]+sum(eta[j]*q_[j][idx] for j in range(n, r)))%m == 0:
+            #if (eta[0]+sum(eta[j]*q_[j][0] for j in range(n, r)))%m == 0:
             #    if 1:
             #        ETA.append(eta)
         else:
@@ -247,35 +254,41 @@ while True:
 
     ETA = []
     data = sorted(data, key=lambda x: x['norm'])
+    l = 0
     norm_min = data[0]['norm']
     for d in data:
-        if d['norm'] > 2 * norm_min:
-            break
         if d['row'] > 3 * args.block_size:
             continue
         ETA.append(d['eta'])
+        norm_max = d['norm']
+        l += 1
+        if l > 2 * full_rank:
+            break
 
     if DEBUG and args.experiment and count > 5:
         break
 
+    if count > 100:
+        break
+
     ETA_m = IntegerMatrix.from_matrix(ETA, int_type='mpz')
-    LLL.reduction(ETA_m)
+    BKZ.reduction(ETA_m, BKZ.EasyParam(block_size=2, flags=bkz_flags))
     ETA = [list(b) for b in ETA_m if any(list(b))]
 
     if VERBOSE < 5:
-        print(f"\rLOOP({count}) offset = {offset:3d} :: rank(ETA) = {len(ETA):3d}/{r}", end='')
-        sys.stdout.flush()
+        print(f"LOOP({count}) offset = {offset:3d} :: rank(ETA) = {len(ETA):3d}/{r} (+{len(ETA)-pre_rank}) {float(norm_max)/norm_min:.4f}")
+    pre_rank = len(ETA)
 
     if len(ETA) < r:
         continue
 
     M = []
     for eta in ETA:
-        row = [eta[idx], eta[n]] + [e *KK_1 for e in eta[n+1:r]]
+        row = [eta[0], eta[n]] + [e *KK_1 for e in eta[n+1:r]]
         M.append(row)
 
     B = IntegerMatrix.from_matrix(M)
-    LLL.reduction(B)
+    BKZ.reduction(B, BKZ.EasyParam(block_size=2, flags=bkz_flags))
 
     M = []
     for b in B:
@@ -285,8 +298,8 @@ while True:
         row = b[:2] + [bi//KK_1 for bi in b[2:]]
         M.append(row)
 
-    if DEBUG or VERBOSE >= 3:
-        matrix_overview(M)
+    #if DEBUG or VERBOSE >= 3:
+    #    matrix_overview(M)
 
     if len(M) == full_rank:
         detM = int(det(M))
@@ -343,6 +356,31 @@ print('Q^j done')
 #     d['poly'] = gi
 """
 
+"""level 1
+ % python recover_modulus.py 31 16 140 30 5 --category 3 --level 1 --verbose 3 --block-size 20
+SEED: 8863667565682591444
 
+groups: 82
+full_rank: 125
+
+LOOP(1) offset =  55 :: rank(ETA) =  61/140 (+61) 2.0109
+LOOP(2) offset =  60 :: rank(ETA) =  90/140 (+29) 2.0639
+LOOP(3) offset =  39 :: rank(ETA) = 122/140 (+32) 2.1507
+LOOP(4) offset =  80 :: rank(ETA) = 140/140 (+18) 2.1507
+modulus = 2123847813
+"""
+
+"""level 2
+ % python recover_modulus.py 31 16 190 40 10 --category 3 --level 2 --verbose 3 --block-size 30
+SEED: 3878840810174315650
+
+groups: 122
+full_rank: 175
+
+LOOP(1) offset =  98 :: rank(ETA) =  91/190 (+91) 2.5523
+LOOP(2) offset =  75 :: rank(ETA) = 156/190 (+65) 2.9758
+LOOP(3) offset =  17 :: rank(ETA) = 190/190 (+34) 2.9758
+modulus = 2146390813
+"""
 
 

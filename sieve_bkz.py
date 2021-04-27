@@ -87,7 +87,6 @@ def bkz_kernel(arg0, params=None, seed=None):
     for b in range(min(pre_blocksize, 10), pre_blocksize + 1):
         print("\r created, LLLed, BKZed %d" % b, end=" ")
         sys.stdout.flush()
-
         par = BKZ_FPYLLL.Param(
             b, strategies=BKZ_FPYLLL.DEFAULT_STRATEGY, max_loops=1, flags=BKZ_FPYLLL.MAX_LOOPS
         )
