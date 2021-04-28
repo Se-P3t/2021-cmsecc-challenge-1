@@ -66,14 +66,14 @@ if not (r > t > n):
 
 
 """ verbose level
-0: none output
+0: no output
 1: basic param
-2: verbose when sieving
+2: print norm of first two vector
 3: matrix_overview of reduced basis
-4: matrix_overview of input basis
+4: 
 5: verbose when BKZ
-10: print all state
-100: print shffule infos
+10: 
+100: 
 """
 VERBOSE = args.verbose
 THREADS = args.threads
@@ -83,7 +83,6 @@ if VERBOSE >= 1:
     print(f"SEED: {SEED}\n")
 random.seed(SEED)
 
-idx = 0
 
 def is_linear_independent(vectors, vec):
     _, indexes = Matrix(list(vectors)+[vec]).T.rref()
@@ -191,8 +190,6 @@ ETA_m = IntegerMatrix.from_matrix(ETA, int_type='mpz')
 LLL.reduction(ETA_m)
 ETA = [list(b) for b in ETA_m if any(list(b))]
 
-assert len(ETA) == 2
-
 
 
 from sage.all import PolynomialRing, ZZ, Matrix
@@ -238,19 +235,7 @@ if not args.experiment:
     }
     save_solution(args.category, args.level, solution)
 
-"""
-f1, f2, f3 = polys[:3]
 
-f1_2 = f1.resultant(f2, varC_[0])
-f2_3 = f2.resultant(f3, varC_[0])
-PRm = PolynomialRing(Zmod(m), 'C1')
-C1 = PRm.gens()[0]
-
-f1_2 = f1_2(0, C1)
-f2_3 = f2_3(0, C1)
-f = f1_2.gcd(f2_3)
-print(f)
-"""
 
 if DEBUG and input("embed? "):
     IPython.embed()
