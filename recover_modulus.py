@@ -335,36 +335,6 @@ if DEBUG and input('embed? '):
 
 
 
-
-
-""" remove ?
-from sage.all import PolynomialRing, ZZ, Matrix
-
-PR = PolynomialRing(ZZ, names=[f"C{i}" for i in range(n)])
-varC_ = PR.gens()
-
-varQ = Matrix(PR, n)
-for i in range(n):
-    varQ[i, n-1] = varC_[i]
-    if i == 0:
-        continue
-    varQ[i, i-1] = 1
-
-varq_ = [None] * n
-
-varQj = varQ**n
-for j in range(n, r):
-    varq_.append(varQj[:, 0].T[0].list())
-    varQj *= varQ
-
-print('Q^j done')
-
-# for d in data:
-#     eta = d['eta']
-#     gi = PR(eta[i] + sum(eta[j]*varq_[j][i] for j in range(n, r)))
-#     d['poly'] = gi
-"""
-
 """level 1
  % python recover_modulus.py 31 16 140 30 5 --category 3 --level 1 --verbose 3 --block-size 20
 SEED: 8863667565682591444

@@ -66,7 +66,7 @@ if not (r > t > n):
 
 
 """ verbose level
-0: print warnning when no solution was found
+0: none output
 1: basic param
 2: verbose when sieving
 3: matrix_overview of reduced basis
@@ -140,125 +140,21 @@ else:
         raise ValueError(f"outputs is not enough (got {len(y_)}, expect >={r+t-1})")
     SOL = None
 
-    raise NotImplementedError
-
 
 MM = 1 << (mbits - zbits)
 BB = math.ceil((2*MM*r)**(1.0*t/(r-t)))
 KK = math.ceil(math.sqrt(r)*2**((r-1.0)/2) * BB)
-full_rank = r-n+1
 
 ETA = []
 
-while True:
-    zero_index = random.randint(0, r-1)
+M = [[0]*(t+r) for _ in range(r)]
+for i in range(r):
+    for j in range(t):
+        M[i][j] = y_[i+j] *KK
+        #M[i][j] = (2*y_[i+j]+1) *KK
+    M[i][t+i] = 1
 
-    M = [[0]*(t+r) for _ in range(r)]
-    for i in range(r):
-        for j in range(t):
-            M[i][j] = y_[i+j] *KK
-            #M[i][j] = (2*y_[i+j]+1) *KK
-        M[i][t+i] = 1
-
-    #M[zero_index][zero_index+t] = KK * m
-
-    random.shuffle(M)
-
-    B = IntegerMatrix.from_matrix(M)
-    flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
-    if DEBUG or VERBOSE >= 5:
-        flags |= BKZ.VERBOSE
-    BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=flags))
-
-    if DEBUG or VERBOSE >= 3:
-        matrix_overview(B)
-
-    for i in range(B.nrows):
-        b = list(B[i])
-        if any(b_i != 0 for b_i in  b[:t]):
-            continue
-        eta = list(b[t:])
-        #eta = b
-        if SOL is not None and VERBOSE >= 3:
-            print(i, (math.floor(m**(1-1.0*n/t)) >> zbits)**2, sum(e*e for e in eta), sum(e*a for e, a in zip(eta, STATE)), [(eta[i]+sum(eta[j]*q_[j][i] for j in range(n, r)))%m for i in range(n)])
-            #print(i, sum(e*e for e in eta), (eta[0]+sum(eta[j-(n-1)]*q_[j][0] for j in range(n, r)))%m)
-        #if any(abs(b_i) > BB for b_i in eta):
-        #    continue
-        if (eta[idx]+sum(eta[j]*q_[j][idx] for j in range(n, r)))%m == 0:
-        #if (eta[0]+sum(eta[j-(n-1)]*q_[j][0] for j in range(n, r)))%m == 0:
-            #vec = [eta[idx]] + eta[n:r]
-            vec = tuple(eta)
-            ETA.append(vec)
-
-    if ETA:
-        ETA_m = IntegerMatrix.from_matrix(ETA, int_type='mpz')
-        LLL.reduction(ETA_m)
-        ETA = [list(b) for b in ETA_m if any(list(b))]
-
-    break
-
-    if VERBOSE < 5:
-        print(f"offset = {zero_index} :: rank(ETA) = {len(ETA)}/{full_rank}")
-
-    if len(ETA) >= full_rank:
-        break
-
-    if input("> "):
-        break
-
-if VERBOSE < 5:
-    print()
-
-
-
-
-#"""
-#if len(ETA) < r-n+1:
-#    print(f"eta not enough, expect {r-n+1} got {len(ETA)}")
-#    if DEBUG:
-#        IPython.embed()
-#    exit(-1)
-
-
-KK = math.ceil(100 * m * 2**((r-n)/2))
-
-M = []
-for eta in ETA:
-    row = [eta[idx], eta[n]] + [e *KK for e in eta[n+1:r]]
-    M.append(row)
-
-matrix_overview(M)
-
-B = IntegerMatrix.from_matrix(M)
-flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
-if DEBUG or VERBOSE >= 5:
-    flags |= BKZ.VERBOSE
-BKZ.reduction(B, BKZ.EasyParam(block_size=args.block_size, flags=flags))
-
-if DEBUG or VERBOSE >= 3:
-    matrix_overview(B)
-
-if DEBUG and input('embed? '):
-    IPython.embed()
-#"""
-
-"""
-d = len(ETA)
-M = [[0]*(d+r-n+1) for _ in range(d+r-n+1)]
-
-for i in range(r-n+1):
-    M[i][i] = 1
-M[0][0] = m
-#for j in range(r-n):
-#    M[0][j+1] = -(m >> 1)
-for j in range(d):
-    KK = random.randint(m**5, m**6)
-    M[j+r-n+1][j+r-n+1] = m *KK
-    M[0][j+r-n+1] = ETA[j][idx] *KK
-    for i in range(n, r):
-        M[i-(n-1)][j+r-n+1] = ETA[j][i] *KK
-
-matrix_overview(M)
+random.shuffle(M)
 
 B = IntegerMatrix.from_matrix(M)
 flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
@@ -266,15 +162,45 @@ if DEBUG or VERBOSE >= 5:
     flags |= BKZ.VERBOSE
 BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=flags))
 
-matrix_overview(B)
+if DEBUG or VERBOSE >= 3:
+    matrix_overview(B)
 
-IPython.embed()
-"""
+ETA = []
+for i in range(2):
+    b = list(B[i])
+    if any(b[:t]):
+        raise ValueError("we need `\sum_i \eta_i Y_i = 0`")
+    eta = list(b[t:])
+
+    if VERBOSE >= 2:
+        if SOL is not None:
+            print(i, sum(e*e for e in eta), sum(e*a for e, a in zip(eta, STATE)))
+        else:
+            print(i, sum(e*e for e in eta))
+
+    if SOL is not None:
+        if sum(e*a for e, a in zip(eta, STATE)) != 0:
+            raise ValueError("we need `\sum_i \eta_i A_i = 0`")
+
+    ETA.append(eta)
+
+if VERBOSE >= 2:
+    print()
+
+ETA_m = IntegerMatrix.from_matrix(ETA, int_type='mpz')
+LLL.reduction(ETA_m)
+ETA = [list(b) for b in ETA_m if any(list(b))]
+
+assert len(ETA) == 2
 
 
-from sage.all import PolynomialRing, ZZ, Zmod, Matrix
 
-PR = PolynomialRing(ZZ, names=('C0', 'C1'))
+from sage.all import PolynomialRing, ZZ, Matrix
+#from sage.rings.polynomial.multi_polynomial_sequence import PolynomialSequence
+
+from resultant import solve_with_resultant
+
+PR = PolynomialRing(ZZ, names=[f"C{i}" for i in range(n)])
 varC_ = PR.gens()
 
 varQ = Matrix(PR, n)
@@ -291,15 +217,28 @@ for j in range(n, r):
     varq_.append(varQj[:, 0].T[0].list())
     varQj *= varQ
 
-
 polys = []
 for eta in ETA:
     for i in range(n):
         gi = PR(eta[i] + sum(eta[j]*varq_[j][i] for j in range(n, r)))
         polys.append(gi)
 
-#F = PolynomialSequence(PR, polys)
 
+for root in solve_with_resultant(polys[:n+1], m, verbose=VERBOSE):
+    if all(poly(*root) % m == 0 for poly in polys):
+        if VERBOSE >= 1:
+            print(f"\ncoefficients: {root}")
+        # only one solution
+        break
+
+if not args.experiment:
+    solution = {
+        'modulus': m,
+        'coefficients': root,
+    }
+    save_solution(args.category, args.level, solution)
+
+"""
 f1, f2, f3 = polys[:3]
 
 f1_2 = f1.resultant(f2, varC_[0])
@@ -309,8 +248,35 @@ C1 = PRm.gens()[0]
 
 f1_2 = f1_2(0, C1)
 f2_3 = f2_3(0, C1)
+f = f1_2.gcd(f2_3)
+print(f)
+"""
 
-print(f1_2.gcd(f2_3))
+if DEBUG and input("embed? "):
+    IPython.embed()
 
-IPython.embed()
+
+
+
+"""level 1
+ % sage -python recover_coefficients.py 2147483647 2 30 8 17 --category 2 --level 1 --verbose 1 --block-size 2
+SEED: 14823415482135119576
+
+0 1553
+1 1670
+
+known roots: []
+known roots: [1596998372]
+
+coefficients: (1596998372, 913674193)
+"""
+
+
+
+
+
+
+
+
+
 
