@@ -81,6 +81,11 @@ def save_solution(category, level, data):
     with open(f"solutions/sol-{category}-{level}.json", 'w') as f:
         f.write(json.dumps(data))
 
+def load_solution(category, level):
+    with open(f"solutions/sol-{category}-{level}.json", 'r') as f:
+        data = json.loads(f.read())
+    return data
+
 
 def matrix_overview(BB):
     try:

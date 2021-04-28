@@ -94,7 +94,6 @@ if (args.category is None) or (args.level is None):
     if not args.experiment:
         raise ValueError("Undefined behavior")
     COEFFS = [random.randint(0, m-1) for _ in range(n)]
-    #COEFFS = [509369830, 464884724]
     INIT_STATE = [random.randint(0, m-1) for _ in range(n)]
     if VERBOSE >= 1:
         print(f"coefficients: {COEFFS}")
@@ -149,8 +148,8 @@ ETA = []
 M = [[0]*(t+r) for _ in range(r)]
 for i in range(r):
     for j in range(t):
-        M[i][j] = y_[i+j] *KK
-        #M[i][j] = (2*y_[i+j]+1) *KK
+        #M[i][j] = y_[i+j] *KK
+        M[i][j] = (2*y_[i+j]+1) *KK
     M[i][t+i] = 1
 
 random.shuffle(M)
@@ -247,16 +246,21 @@ if DEBUG and input("embed? "):
  % sage -python recover_coefficients.py 2147483647 2 30 8 17 --category 2 --level 1 --verbose 1 --block-size 2
 SEED: 14823415482135119576
 
-0 1553
-1 1670
-
 known roots: []
 known roots: [1596998372]
 
 coefficients: (1596998372, 913674193)
 """
 
+"""level 2
+ % sage -python recover_coefficients.py 2147483647 2 60 15 23 --category 2 --level 2 --verbose 1 --block-size 2
+SEED: 16807067413575740166
 
+known roots: []
+known roots: [423368878]
+
+coefficients: (423368878, 1375517413)
+"""
 
 
 
