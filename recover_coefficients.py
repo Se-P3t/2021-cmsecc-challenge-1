@@ -145,12 +145,14 @@ KK = math.ceil(math.sqrt(r)*2**((r-1.0)/2) * BB)
 
 ETA = []
 
-M = [[0]*(t+r) for _ in range(r)]
+M = [[0]*(t+r) for _ in range(r+t)]
+for i in range(t):
+    M[i][i] = m *KK
 for i in range(r):
     for j in range(t):
         #M[i][j] = y_[i+j] *KK
-        M[i][j] = (2*y_[i+j]+1) *KK
-    M[i][t+i] = 1
+        M[t+i][j] = (2*y_[i+j]+1) *KK
+    M[t+i][t+i] = 1
 
 random.shuffle(M)
 
@@ -164,23 +166,28 @@ if DEBUG or VERBOSE >= 3:
     matrix_overview(B)
 
 ETA = []
-for i in range(2):
+for i in range(B.nrows):
     b = list(B[i])
     if any(b[:t]):
+        if i >= 2:
+            break
         raise ValueError("we need `\sum_i \eta_i Y_i = 0`")
     eta = list(b[t:])
 
     if VERBOSE >= 2:
         if SOL is not None:
-            print(i, sum(e*e for e in eta), sum(e*a for e, a in zip(eta, STATE)))
+            print(i, sum(e*e for e in eta), sum(e*a for e, a in zip(eta, STATE))%m)
         else:
             print(i, sum(e*e for e in eta))
 
     if SOL is not None:
-        if sum(e*a for e, a in zip(eta, STATE)) != 0:
+        if sum(e*a for e, a in zip(eta, STATE))%m != 0:
+            if i >= 2:
+                break
             raise ValueError("we need `\sum_i \eta_i A_i = 0`")
 
-    ETA.append(eta)
+    if SOL is not None or i < 2:
+        ETA.append(eta)
 
 if VERBOSE >= 2:
     print()
@@ -191,7 +198,7 @@ ETA = [list(b) for b in ETA_m if any(list(b))]
 
 
 
-from sage.all import PolynomialRing, ZZ, Matrix
+from sage.all import PolynomialRing, ZZ, Zmod, Matrix
 #from sage.rings.polynomial.multi_polynomial_sequence import PolynomialSequence
 
 from resultant import solve_with_resultant
@@ -219,6 +226,8 @@ for eta in ETA:
         gi = PR(eta[i] + sum(eta[j]*varq_[j][i] for j in range(n, r)))
         polys.append(gi)
 
+IPython.embed()
+exit()
 
 for root in solve_with_resultant(polys[:n+1], m, verbose=VERBOSE):
     if all(poly(*root) % m == 0 for poly in polys):

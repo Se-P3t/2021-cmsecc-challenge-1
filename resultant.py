@@ -60,11 +60,12 @@ def solve_with_resultant(polys, m, verbose=0, root = None):
             hj = polys[j]
 
             for i in range(j):
+                hi = polys[i]
 
                 if verbose >= 2:
-                    print(f"compute resultant of polys[{j}] and polys[{i}] with respect to `{x_[j-1]}`")
+                    print(f"compute resultant of polys[{j}] ({hj.degree()}) and polys[{i}] ({hj.degree()}) with respect to `{x_[j-1]}`")
 
-                new_hi = polys[i].resultant(hj, x_[j-1])
+                new_hi = hi.resultant(hj, x_[j-1])
                 if new_hi.is_constant():
                     raise RuntimeError("polys must be algebraically independent")
                 new_polys.append(new_hi)
