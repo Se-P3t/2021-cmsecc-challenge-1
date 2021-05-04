@@ -4,16 +4,18 @@ recover initial state
 """
 import os
 import math
+import json
 import random
 import argparse
 import IPython
 from copy import copy
+from functools import reduce
 
 from sympy.matrices import Matrix, zeros, eye
 from fpylll import FPLLL, IntegerMatrix, BKZ, LLL
 
 from util import read_data, save_solution, matrix_overview
-from sieve_asvp import solve_asvp
+from sieve_bkz import solve_bkz
 
 
 parser = argparse.ArgumentParser(description=__doc__,
@@ -84,10 +86,8 @@ if VERBOSE >= 1:
 random.seed(SEED)
 
 
-def is_linear_independent(vectors, vec):
-    _, indexes = Matrix(list(vectors)+[vec]).T.rref()
-    return len(indexes) == len(vectors)+1
-
+def gcd(nums):
+    return reduce(math.gcd, nums)
 
 
 if (args.category is None) or (args.level is None):
@@ -99,10 +99,12 @@ if (args.category is None) or (args.level is None):
         print(f"coefficients: {COEFFS}")
         print(f"initial state: {INIT_STATE}")
     STATE = copy(INIT_STATE)
-    for j in range(n, r+t-1):
+    N = r+t-1
+    for j in range(n, N):
         a_j = sum(c_i*a_i for c_i, a_i in zip(COEFFS, STATE[-n:])) % m
         STATE.append(a_j)
     y_ = [a_i >> zbits for a_i in STATE]
+    z_ = [a_i % 2**zbits for a_i in STATE]
     SOL = tuple(COEFFS)
 
     Q = zeros(n)
@@ -134,8 +136,9 @@ if (args.category is None) or (args.level is None):
 
 else:
     y_ = read_data(args.category, args.level)
-    if len(y_) < r+t-1:
-        raise ValueError(f"outputs is not enough (got {len(y_)}, expect >={r+t-1})")
+    N = len(y_)
+    if N < r+t-1:
+        raise ValueError(f"outputs is not enough (got {N}, expect >={r+t-1})")
     SOL = None
 
 
@@ -143,29 +146,47 @@ MM = 1 << (mbits - zbits)
 BB = math.ceil((2*MM*r)**(1.0*t/(r-t)))
 KK = math.ceil(math.sqrt(r)*2**((r-1.0)/2) * BB)
 
+bkz_flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
+if VERBOSE >= 5:
+    bkz_flags |= BKZ.VERBOSE
+
 ETA = []
 
-M = [[0]*(t+r) for _ in range(r+t)]
-for i in range(t):
-    M[i][i] = m *KK
+M = [[0]*(t+r) for _ in range(r)]
+#for i in range(t):
+#    M[i][i] = m
 for i in range(r):
     for j in range(t):
-        #M[i][j] = y_[i+j] *KK
-        M[t+i][j] = (2*y_[i+j]+1) *KK
-    M[t+i][t+i] = 1
+        M[i][j] = y_[i+j] *KK
+        #M[i][j] = (2*y_[i+j]+1) *KK
+    M[i][t+i] = 1
 
-random.shuffle(M)
+from sage.all import Matrix, ZZ, vector
+
+# M = Matrix(ZZ, r, t)
+# for i in range(r):
+#     for j in range(t):
+#         M[i, j] = y_[i+j]
+# 
+# M = M.left_kernel().basis_matrix()
 
 B = IntegerMatrix.from_matrix(M)
-flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
-if DEBUG or VERBOSE >= 5:
-    flags |= BKZ.VERBOSE
-BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=flags))
+if not args.sieve:
+    BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=bkz_flags))
+else:
+    B = solve_bkz(
+        B,
+        threads=THREADS, # fake
+        verbose=(VERBOSE >= 2),
+        blocksizes=f"20:{args.block_size}:2"
+    )
+
 
 if DEBUG or VERBOSE >= 3:
     matrix_overview(B)
 
-ETA = []
+expect_vectors = math.ceil((r+t-1.0)/t) + 3
+
 for i in range(B.nrows):
     b = list(B[i])
     if any(b[:t]):
@@ -173,20 +194,21 @@ for i in range(B.nrows):
             break
         raise ValueError("we need `\sum_i \eta_i Y_i = 0`")
     eta = list(b[t:])
+    #eta = b
 
     if VERBOSE >= 2:
         if SOL is not None:
-            print(i, sum(e*e for e in eta), sum(e*a for e, a in zip(eta, STATE))%m)
+            print(i, sum(e*e for e in eta)//r, sum(e*a for e, a in zip(eta, STATE)))
         else:
-            print(i, sum(e*e for e in eta))
+            print(i, sum(e*e for e in eta)//r)
 
     if SOL is not None:
-        if sum(e*a for e, a in zip(eta, STATE))%m != 0:
-            if i >= 2:
+        if sum(e*a for e, a in zip(eta, STATE)) != 0:
+            if i >= expect_vectors:
                 break
             raise ValueError("we need `\sum_i \eta_i A_i = 0`")
 
-    if SOL is not None or i < 2:
+    if SOL is not None or i < expect_vectors:
         ETA.append(eta)
 
 if VERBOSE >= 2:
@@ -196,6 +218,87 @@ ETA_m = IntegerMatrix.from_matrix(ETA, int_type='mpz')
 LLL.reduction(ETA_m)
 ETA = [list(b) for b in ETA_m if any(list(b))]
 
+if SOL is not None:
+    assert len(ETA) >= expect_vectors
+
+M = Matrix(ZZ, r+t-1, t*expect_vectors)
+for j in range(t):
+    for i in range(r):
+        for a in range(expect_vectors):
+            M[j+i, expect_vectors*j+a] = ETA[a][i]
+B = M.left_kernel(basis="LLL").basis_matrix()
+
+nrows = B.nrows()
+if VERBOSE >= 1:
+    print(f"kernel rank: {nrows}")
+assert 0 < nrows <= 2
+
+b = B[0]
+if b[0] < 0:
+    b *= -1
+assert min(b) >= 0 and max(b) < 2**zbits, f"range b: {min(b)}, {max(b)}"
+
+a_ = [2**zbits*y + int(z) for y, z in zip(y_, b)]
+
+if SOL is not None:
+    print(tuple(STATE) == tuple(a_))
+
+N = N - 1 # leave one pair to check the solution
+
+M = [[0]*(N+1) for _ in range(N+1)]
+for j in range(N-n):
+    for i in range(n+1):
+        M[i][j] = a_[j+i] *KK
+    M[n+1+j][j] = m *KK
+for i in range(n+1):
+    M[i][N-n+i] = 1
+M[n][N] = m >> 1
+
+#matrix_overview(M)
+
+B = IntegerMatrix.from_matrix(M)
+#BKZ.reduction(B, BKZ.EasyParam(block_size=min(20, args.block_size), flags=bkz_flags))
+LLL.reduction(B)
+
+if DEBUG or VERBOSE >= 3:
+    matrix_overview(B)
+
+for b in B:
+    b = list(b)
+    if any(b[:N-n]):
+        continue
+    if abs(b[N]) != m >> 1:
+        continue
+    if b[N] == m >> 1:
+        c_ = [int(-c_i)%m for c_i in b[N-n:N]]
+    else:
+        c_ = [int(c_i)%m for c_i in b[N-n:N]]
+
+    if SOL is not None:
+        if tuple(SOL) == tuple(COEFFS):
+            print("found the coefficients")
+            break
+    else:
+        if sum(c*a for c, a in zip(c_, a_[-n-1:-1]))%m == a_[-1]:
+            print(c_)
+            break
+else:
+    raise ValueError("not found")
+
+if SOL is None:
+    solution = {
+        'modulus': m,
+        'coefficients': c_,
+        'initial_state': tuple(a_[:n]),
+    }
+    with open(f"solutions/sol-{args.category}-{args.level}.json", "w") as f:
+        f.write(json.dumps(solution))
+
+
+
+if DEBUG and input('embed? '):
+    IPython.embed()
+exit(0)
 
 
 from sage.all import PolynomialRing, ZZ, Zmod, Matrix
@@ -226,8 +329,6 @@ for eta in ETA:
         gi = PR(eta[i] + sum(eta[j]*varq_[j][i] for j in range(n, r)))
         polys.append(gi)
 
-IPython.embed()
-exit()
 
 for root in solve_with_resultant(polys[:n+1], m, verbose=VERBOSE):
     if all(poly(*root) % m == 0 for poly in polys):
@@ -273,8 +374,34 @@ coefficients: (423368878, 1375517413)
 
 
 
+"""level 6
+ % sage -python recover_coefficients.py 2140900439 8 90 20 11 --category 2 --level 6 --verbose 1 --block-size 20
+SEED: 9597122271491641758
 
+kernel rank: 2
+[1468898684, 429201201, 1438911747, 1343646518, 197478154, 1760674261, 1954064960, 1521596057]
+"""
 
+"""level 7
+ % sage -python recover_coefficients.py 2086596509 10 110 26 11 --category 2 --level 7 --verbose 1 --block-size 20
+SEED: 7365255167887185368
 
+kernel rank: 2
+[1111873952, 1210156476, 822665602, 1221543376, 50425289, 1211476215, 1888560914, 1679919063, 1715756131, 141246785]
+"""
 
+"""level 8
+ % sage -python recover_coefficients.py 2123058169 12 110 28 8 --category 2 --level 8 --verbose 1 --block-size 20
+SEED: 6527440548808491847
 
+kernel rank: 2
+[1380518532, 572802739, 397998604, 1517367287, 1838517468, 1894991963, 186761507, 1691926163, 917271042, 1840254211, 1520485994, 1544456793]
+"""
+
+"""level 9
+ % sage -python recover_coefficients.py 2147483647 14 128 32 8 --category 2 --level 9 --verbose 1 --block-size 32
+SEED: 14179487156340854594
+
+kernel rank: 2
+[755735009, 435105367, 1987422269, 141113323, 1831273687, 150474978, 1521781010, 88703098, 2128502238, 1314935750, 1897202874, 765777736, 1257457888, 851182418]
+"""

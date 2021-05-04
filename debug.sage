@@ -2,7 +2,7 @@ N = 40
 
 m = 2**31 - 1
 n = 16
-PR = PolynomialRing(Zmod(m), names=[f'c{i}' for i in range(n)]+[f"a{i}" for i in range(n)])
+PR = PolynomialRing(ZZ, names=[f'c{i}' for i in range(n)]+[f"a{i}" for i in range(n)])
 var = PR.gens()
 c_, a_ = var[:n], var[n:]
 

@@ -96,6 +96,20 @@ we need NEW idea
 
 
 
+$U = 0 \longrightarrow \sum \eta A = 0$
+
+$vector(z_0, \ldots, z_{d-1})$ is left kernel of ${ETA}^T$
+
+
+
+
+
+
+
+
+
+
+
 Let $g_i = \eta_i + \sum_{j=n}^{r-1} \eta_j q_{j,i}$, we can get
 
 $$
@@ -155,7 +169,6 @@ $$
 $$
 
 **failed**: wanted vector too large      (could used as $\eta'$ ? )
-
 
 
 
