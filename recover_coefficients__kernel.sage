@@ -192,7 +192,7 @@ assert 0 < nrows <= 2
 if DEBUG and input('embed? '):
     IPython.embed()
     if input("exit? "):
-        exit(0)
+        exit(int(0))
 
 print("checking z_i:", end=' ')
 b = B[0]
