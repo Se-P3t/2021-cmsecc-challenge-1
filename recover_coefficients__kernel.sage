@@ -4,8 +4,8 @@ recover coefficients
     find `z_i` in kernel(ETA)
 """
 import os
-import json
 import argparse
+import subprocess
 import IPython
 
 from fpylll import FPLLL, IntegerMatrix, BKZ, LLL
@@ -32,6 +32,8 @@ parser.add_argument('--seed',  type=int, dest="seed", default=0,
                     help="randomness seed (0 for auto choose)")
 parser.add_argument('--debug', action='store_true', dest="debug",
                     help="call IPython.embed when running")
+parser.add_argument('--check', action='store_true', dest="check",
+                    help="check the solution")
 # args for BKZ
 parser.add_argument('--block-size', type=int, dest="block_size", default=20,
                     help="BKZ block size")
@@ -230,6 +232,7 @@ if SOL is not None:
         IPython.embed()
     if not res:
         exit(int(-1))
+
 else:
     Q = Q1.change_ring(ZZ)
     c_ = []
@@ -250,3 +253,6 @@ else:
             'initial_state': tuple(a_[:n]),
         }
         save_solution(args.category, args.level, solution)
+
+    if args.check:
+        _ = subprocess.check_call(f"python check.py {args.category} {args.level}", shell=True)
