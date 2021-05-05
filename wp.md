@@ -31,6 +31,12 @@ namely, the $N$ dimensional vector $\vec z$ belongs to the left kernel of the ma
 
 noticed that we also have $\vec y$ in the null space, so we might find $\vec z$ using LLL if $|\vec z| \ll |\vec y|$
 
+#### coefficients
+
+$A_{i+1} \equiv A_i \cdot Q \pmod m$
+
+just solve the equation over $\mathbb{Z}/m\mathbb{Z}$
+
 #### note
 
 if we have enough pairs of $\eta_i$, the rank of $ker(ETA)$, denoted as $B$, will reduce to $2$
