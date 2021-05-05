@@ -53,9 +53,15 @@ OPEN PROBLEM: what can we learn further from the kernel when $|\vec z|$ is big
 
 ## category 3
 
+### [recover_modulus__kernel.sage](./recover_modulus__kernel.sage)
 
+we restored the initial state by the method mentioned in the second category;
 
+since $A_{i+1} \equiv A_i \cdot Q \pmod m$, we have $A_{i+1} \cdot A_i^{-1} \equiv A_{j+1} \cdot A_j^{-1} \pmod m$
 
+so we can compute GCD several times and finally get the modulus
+
+then the rest are the same
 
 # misc
 

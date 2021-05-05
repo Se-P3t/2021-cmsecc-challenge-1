@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-recover coefficients
+recover modulus
     find `z_i` in kernel(ETA)
 """
 import os
@@ -16,7 +16,7 @@ from util import read_data, save_solution, matrix_overview
 parser = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
 # chall params
-parser.add_argument('m', type=int, help="modulus")
+parser.add_argument('mbits', type=int, help="number of bits of the modulus")
 parser.add_argument('n', type=int, help="degree of connection polynomial")
 parser.add_argument('r', type=int)
 parser.add_argument('t', type=int)
@@ -43,12 +43,11 @@ args, _ = parser.parse_known_args()
 
 DEBUG = args.debug
 
-m = args.m
+mbits = args.mbits
 n = args.n
 r = args.r
 t = args.t
 zbits = args.zbits
-mbits = m.bit_length()
 
 if not (r > t > n):
     raise ValueError("r > t > n")
@@ -72,9 +71,11 @@ set_random_seed(SEED)
 if (args.category is None) or (args.level is None):
     if not args.experiment:
         raise ValueError("Undefined behavior")
+    m = random_prime(2**mbits, lbound=2**(mbits-1))
     COEFFS = [randint(0, m-1) for _ in range(n)]
     INIT_STATE = [randint(0, m-1) for _ in range(n)]
     if VERBOSE >= 1:
+        print(f"modulus: {m}")
         print(f"coefficients: {COEFFS}")
         print(f"initial state: {INIT_STATE}")
         print()
@@ -115,18 +116,11 @@ if VERBOSE >= 5:
 
 ETA = []
 
-USE_MODULUS = False
-if USE_MODULUS:
-    M = [[0]*(t+r) for _ in range(r)]
-else:
-    M = [[0]*(t+r) for _ in range(r)]
+M = [[0]*(t+r) for _ in range(r)]
 for i in range(r):
     for j in range(t):
         M[i][j] = y_[i+j] *KK
     M[i][t+i] = 1
-if USE_MODULUS:
-    for i in range(t):
-        M[r+i][i] = m
 
 if DEBUG and VERBOSE >= 3:
     matrix_overview(M)
@@ -211,8 +205,41 @@ else:
     else:
         print(f"False :: range {min(b)}, {max(b)}")
         exit(int(-1))
+         
 
 a_ = [int(2**zbits*y + z) for y, z in zip(y_, b)]
+
+print("finding modulus")
+km = 0
+for offset in range(N-2*n+2):
+    A0 = Matrix(ZZ, n)
+    A1 = Matrix(ZZ, n)
+    A2 = Matrix(ZZ, n)
+    for i in range(n):
+        for j in range(n):
+            A0[i, j] = a_[offset+i+j]
+            A1[i, j] = a_[offset+i+j+1]
+            A2[i, j] = a_[offset+i+j+2]
+    tmp = (A1 * A0.inverse() * A1)[n-1, n-1]
+    km = gcd(km, tmp.numerator() - A2[n-1, n-1]*tmp.denominator())
+    bits = int(km).bit_length()
+    print(f"\r{bits:3d} bits", end=' ')
+    if bits == mbits:
+        if SOL is None:
+            print("maybe")
+        else:
+            res = (km == m)
+            print(res)
+            if not res:
+                if DEBUG and input('embed? '):
+                    IPython.embed()
+                exit(int(-1))
+        break
+else:
+    print("\rcannot find modulus")
+    exit(int(-1))
+
+m = int(km)
 
 print("checking c_i:", end=' ')
 A0 = Matrix(Zmod(m), n)
@@ -229,6 +256,7 @@ if SOL is not None:
         IPython.embed()
     if not res:
         exit(int(-1))
+
 else:
     Q = Q1.change_ring(ZZ)
     c_ = []
