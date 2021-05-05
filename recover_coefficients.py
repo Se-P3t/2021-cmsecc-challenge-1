@@ -152,14 +152,16 @@ if VERBOSE >= 5:
 
 ETA = []
 
-M = [[0]*(t+r) for _ in range(r)]
-#for i in range(t):
-#    M[i][i] = m
+M = [[0]*(t+r) for _ in range(r+t)]
 for i in range(r):
     for j in range(t):
         M[i][j] = y_[i+j] *KK
         #M[i][j] = (2*y_[i+j]+1) *KK
     M[i][t+i] = 1
+for i in range(t):
+    M[r+i][i] = m
+
+#matrix_overview(M)
 
 from sage.all import Matrix, ZZ, vector
 
@@ -185,12 +187,15 @@ else:
 if DEBUG or VERBOSE >= 3:
     matrix_overview(B)
 
-expect_vectors = math.ceil((r+t-1.0)/t) + 3
+expect_vectors = math.ceil((r+t-1.0)/t) + 1
+if VERBOSE >= 1:
+    print(f"expect_vectors: {expect_vectors}")
+    print()
 
 for i in range(B.nrows):
     b = list(B[i])
     if any(b[:t]):
-        if i >= 2:
+        if i >= expect_vectors:
             break
         raise ValueError("we need `\sum_i \eta_i Y_i = 0`")
     eta = list(b[t:])
@@ -198,7 +203,8 @@ for i in range(B.nrows):
 
     if VERBOSE >= 2:
         if SOL is not None:
-            print(i, sum(e*e for e in eta)//r, sum(e*a for e, a in zip(eta, STATE)))
+            print(i, sum(e*e for e in eta)//r, sum(e*a for e, a in zip(eta, STATE)),
+                  sum(e*y for e, y in zip(eta, y_)), sum(e*z for e, z in zip(eta, z_)))
         else:
             print(i, sum(e*e for e in eta)//r)
 
@@ -219,7 +225,8 @@ LLL.reduction(ETA_m)
 ETA = [list(b) for b in ETA_m if any(list(b))]
 
 if SOL is not None:
-    assert len(ETA) >= expect_vectors
+    assert len(ETA) >= expect_vectors, f"rank ETA: {len(ETA)}"
+    expect_vectors = len(ETA)
 
 M = Matrix(ZZ, r+t-1, t*expect_vectors)
 for j in range(t):
@@ -232,6 +239,8 @@ nrows = B.nrows()
 if VERBOSE >= 1:
     print(f"kernel rank: {nrows}")
 assert 0 < nrows <= 2
+
+IPython.embed(); exit()
 
 b = B[0]
 if b[0] < 0:
@@ -373,30 +382,6 @@ coefficients: (423368878, 1375517413)
 """
 
 
-
-"""level 6
- % sage -python recover_coefficients.py 2140900439 8 90 20 11 --category 2 --level 6 --verbose 1 --block-size 20
-SEED: 9597122271491641758
-
-kernel rank: 2
-[1468898684, 429201201, 1438911747, 1343646518, 197478154, 1760674261, 1954064960, 1521596057]
-"""
-
-"""level 7
- % sage -python recover_coefficients.py 2086596509 10 110 26 11 --category 2 --level 7 --verbose 1 --block-size 20
-SEED: 7365255167887185368
-
-kernel rank: 2
-[1111873952, 1210156476, 822665602, 1221543376, 50425289, 1211476215, 1888560914, 1679919063, 1715756131, 141246785]
-"""
-
-"""level 8
- % sage -python recover_coefficients.py 2123058169 12 110 28 8 --category 2 --level 8 --verbose 1 --block-size 20
-SEED: 6527440548808491847
-
-kernel rank: 2
-[1380518532, 572802739, 397998604, 1517367287, 1838517468, 1894991963, 186761507, 1691926163, 917271042, 1840254211, 1520485994, 1544456793]
-"""
 
 """level 9
  % sage -python recover_coefficients.py 2147483647 14 128 32 8 --category 2 --level 9 --verbose 1 --block-size 32

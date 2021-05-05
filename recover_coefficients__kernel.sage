@@ -192,70 +192,61 @@ if DEBUG and input('embed? '):
     if input("exit? "):
         exit(0)
 
+print("checking z_i:", end=' ')
 b = B[0]
 if b[0] < 0:
     b *= -1
-assert min(b) >= 0 and max(b) < 2**zbits, f"range b: {min(b)}, {max(b)}"
-
-a_ = [2**zbits*y + int(z) for y, z in zip(y_, b)]
-
 if SOL is not None:
-    res = (tuple(STATE) == tuple(a_))
-    print("find z_i:", res)
+    res = (tuple(z_) == tuple(b))
+    print(res)
     if not res:
-        exit(-1)
-
-N = N - 1 # leave one pair to check the solution
-
-M = [[0]*(N+1) for _ in range(N+1)]
-for j in range(N-n):
-    for i in range(n+1):
-        M[i][j] = a_[j+i] *KK
-    M[n+1+j][j] = m *KK
-for i in range(n+1):
-    M[i][N-n+i] = 1
-M[n][N] = m >> 1
-
-if DEBUG and VERBOSE >= 3:
-    matrix_overview(M)
-
-B = IntegerMatrix.from_matrix(M)
-#BKZ.reduction(B, BKZ.EasyParam(block_size=min(20, args.block_size), flags=bkz_flags))
-LLL.reduction(B)
-
-if DEBUG or VERBOSE >= 3:
-    matrix_overview(B)
-
-for b in B:
-    b = list(b)
-    if any(b[:N-n]):
-        continue
-    if abs(b[N]) != m >> 1:
-        continue
-    if b[N] == m >> 1:
-        c_ = [int(-c_i)%m for c_i in b[N-n:N]]
-    else:
-        c_ = [int(c_i)%m for c_i in b[N-n:N]]
-
-    if SOL is not None:
-        if tuple(SOL) == tuple(COEFFS):
-            print("found the coefficients")
-            break
-    else:
-        if sum(c*a for c, a in zip(c_, a_[-n-1:-1]))%m == a_[-1]:
-            print(c_)
-            break
+        if DEBUG and input('embed? '):
+            IPython.embed()
+        exit(int(-1))
 else:
-    raise ValueError("not found")
+    if min(b) >= 0 and max(b) < 2**zbits:
+        print("maybe")
+    else:
+        print(f"False :: range {min(b)}, {max(b)}")
+        exit(int(-1))
+         
 
-if SOL is None:
-    solution = {
-        'modulus': m,
-        'coefficients': c_,
-        'initial_state': tuple(a_[:n]),
-    }
-    save_solution(args.category, args.level, solution)
+a_ = [int(2**zbits*y + z) for y, z in zip(y_, b)]
+#assert len(a_) >= 2*n
+A0 = Matrix(Zmod(m), n)
+A1 = Matrix(Zmod(m), n)
+for i in range(n):
+    for j in range(n):
+        A0[i, j] = a_[i+j]
+        A1[i, j] = a_[i+j+1]
 
 
-if DEBUG and input('embed? '):
-    IPython.embed()
+print("checking c_i:", end=' ')
+Q1 = A0.solve_right(A1)
+if SOL is not None:
+    res = (Q1 == Q)
+    print(res)
+    if DEBUG and input('embed? '):
+        IPython.embed()
+    if not res:
+        exit(int(-1))
+else:
+    Q = Q1.change_ring(ZZ)
+    c_ = []
+    for i in range(n):
+        for j in range(n-1):
+            entry = 1 if i == j+1 else 0
+            if Q[i, j] != entry:
+                print("False")
+                exit(int(-1))
+        c_.append(int(Q[i, n-1]))
+    print("True")
+
+    if SOL is None:
+        solution = {
+            'modulus': int(m),
+            'zbits': zbits,
+            'coefficients': c_,
+            'initial_state': tuple(a_[:n]),
+        }
+        save_solution(args.category, args.level, solution)
