@@ -1,3 +1,58 @@
+# challenge 1
+
+## category 1
+
+## category 2
+
+### [recover_coefficients__kernel.sage](./recover_coefficients__kernel.sage)
+
+after we reduced the kernel lattice, we can get $d$ pairs of $\eta_i$ such that $\sum _i^{r-1} \eta_i Z_{j+i} = 0$ ($0 \leq j < t$)
+
+combine them in one matrix, given that
+$$
+\begin{aligned}
+\left(\begin{matrix}
+z_0 \\ \vdots \\ z_{r-1} \\ \vdots \\ z_{N-1}
+\end{matrix}\right)^T
+&\cdot \left(\begin{matrix}
+\eta_0^{(0)} &\cdots &\eta_0^{(d-1)} & & & & \\
+\vdots &\cdots &\vdots &\ddots & & & \\
+\eta_{r-1}^{(0)} &\cdots &\eta_{r-1}^{(d-1)} &\ddots &\eta_0^{(0)} &\cdots &\eta_0^{(d-1)} \\
+ & & &\ddots &\vdots &\cdots &\vdots \\
+ & & & &\eta_{r-1}^{(0)} &\cdots &\eta_{r-1}^{(d-1)}
+\end{matrix}\right) \\
+&= \left(\begin{matrix} 0 &\cdots &0 &\cdots &0 &\cdots &0 \end{matrix}\right)
+\end{aligned}
+$$
+
+where $N = r+t-1$
+
+namely, the $N$ dimensional vector $\vec z$ belongs to the left kernel of the matrix $ETA$
+
+noticed that we also have $\vec y$ in the null space, so we might find $\vec z$ using LLL if $|\vec z| \ll |\vec y|$
+
+#### note
+
+if we have enough pairs of $\eta_i$, the rank of $ker(ETA)$, denoted as $B$, will reduce to $2$
+
+since both $\vec y$ and $\vec z$ belong to the linear span, we have $gcd(B[0, j], B[1, j])$ divides $gcd(\vec y[j], \vec z_[j])$
+
+to leak more information of $\vec z$, we can substitute these variable; for example, let $\vec y' := 2 \vec y + 1$, then $\vec z' = z' - 2^{zbits-1}$, relatively, we need to adjust the parameter $r$ and $t$
+
+it is easy to see that this method will quickly enlarge the dimension of the lattice, resulting in low efficiency
+
+OPEN PROBLEM: what can we learn further from the kernel when $|\vec z|$ is big
+
+
+
+## category 3
+
+
+
+
+
+# misc
+
 $$
 a_i = 2^k y_i + z_i \\
 a_{i+j} = \sum_{l=0}^{n-1} q_{j,l} a_{i+l} \bmod m
