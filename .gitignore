@@ -7,3 +7,10 @@ svpchallenge
 *.sage.py
 *.mat
 ~*.md
+
+*.zip
+bkzcache
+svpc_*
+a.out
+challenge-*
+LWE_*
