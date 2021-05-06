@@ -57,7 +57,7 @@ similarly, we could get $[2\vec y +1, (\vec z - 2^{zbits-1})+k_2(2\vec y +1)]$ i
 
 FIND the left kernel of $[\vec y, \vec z +k_1\vec y, \vec z + k_2(2\vec y +1), \vec 1]$ 
 
-
+*for the sign of each vector, we simply iterate all possible situations*
 
 ## category 3
 
