@@ -49,6 +49,14 @@ it is easy to see that this method will quickly enlarge the dimension of the lat
 
 OPEN PROBLEM: what can we learn further from the kernel when $|\vec z|$ is big
 
+#### note 2
+
+when $|\vec y| \ll |\vec z|$, the reduced basis matrix is likely to be $[\vec y, \vec z + k_1 \vec y]$
+
+similarly, we could get $[2\vec y +1, (\vec z - 2^{zbits-1})+k_2(2\vec y +1)]$ if $|\vec y'| \ll |\vec z'|$
+
+FIND the left kernel of $[\vec y, \vec z +k_1\vec y, \vec z + k_2(2\vec y +1), \vec 1]$ 
+
 
 
 ## category 3
