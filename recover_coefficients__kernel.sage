@@ -51,7 +51,7 @@ zbits = args.zbits
 mbits = m.bit_length()
 
 USE_SUBS = False
-if 2*zbits > mbits + 3: # roughly check
+if 2*zbits > mbits + 2: # roughly check
     USE_SUBS = True
 
 if not (r > t > n):
@@ -59,7 +59,7 @@ if not (r > t > n):
 
 
 """ verbose level
-0: no output
+0: solution bound check
 1: basic param
 2: print norm
 3: matrix_overview of reduced basis
@@ -220,14 +220,15 @@ if VERBOSE >= 1:
     if USE_SUBS:
         print(f"kernel' rank: {nrows1}")
     print()
-assert nrows == 2
-if USE_SUBS:
-    assert nrows1 == 2
 
 if DEBUG and input('embed? '):
     IPython.embed()
     if input("exit? "):
         exit(int(0))
+
+assert nrows == 2, r"some `\eta` are wrong"
+if USE_SUBS:
+    assert nrows1 == 2, r"some `\eta` are wrong"
 
 if USE_SUBS:
     for code in range(1 << 3):

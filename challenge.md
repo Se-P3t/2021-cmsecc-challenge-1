@@ -26,12 +26,163 @@
 
 ### level 1
 
+```sh
+ % time sage recover_coefficients__kernel.sage 2147483647 2 30 8 17 --category 2 --level 1 --verbose 1 --block-size 20 --check
+SEED: 12928939533349146289
+
+expect_vectors: 5
+
+kernel rank: 2
+kernel' rank: 2
+
+find k: 7 0
+checking z_i: maybe
+checking c_i: True
+
+================
+CPU     102%
+user    2.144
+system  0.261
+total   2.354
+```
+
+```json
+{
+    "modulus": 2147483647,
+    "zbits": 17,
+    "coefficients": [1596998372, 913674193],
+    "initial_state": [25583676, 1935662022]
+}
+```
+
 ### level 2
+
+```sh
+ % time sage recover_coefficients__kernel.sage 2147483647 2 60 15 23 --category 2 --level 2 --verbose 1 --block-size 20 --check
+SEED: 608460742630951138
+
+expect_vectors: 5
+
+kernel rank: 2
+kernel' rank: 2
+
+find k: -26204 -811
+checking z_i: maybe
+checking c_i: True
+
+================
+CPU     101%
+user    2.714
+system  0.237
+total   2.902
+```
+
+```json
+{
+    "modulus": 2147483647,
+    "zbits": 23,
+    "coefficients": [423368878, 1375517413],
+    "initial_state": [1968687461, 159779378]
+}
+```
+
+### level 3
+
+```sh
+ % time sage recover_coefficients__kernel.sage 2147483647 3 68 17 21 --category 2 --level 3 --verbose 1 --block-size 20 --check
+SEED: 15922487348339387766
+
+expect_vectors: 5
+
+kernel rank: 2
+kernel' rank: 2
+
+find k: -1610 -50
+checking z_i: maybe
+checking c_i: True
+
+================
+CPU     101%
+user    2.914
+system  0.296
+total   3.160
+```
+
+```json
+{
+    "modulus": 2147483647,
+    "zbits": 21,
+    "coefficients": [233454232, 712694596, 1250324919],
+    "initial_state": [1968687461, 159779378, 933973255]
+}
+```
+
+### level 4
+
+```sh
+ % time sage recover_coefficients__kernel.sage 2147483647 4 95 25 21 --category 2 --level 4 --verbose 1 --block-size 30 --check 
+SEED: 18135446848677888257
+
+expect_vectors: 5
+
+kernel rank: 2
+kernel' rank: 2
+
+find k: 1540 9
+checking z_i: maybe
+checking c_i: True
+
+================
+CPU     100%
+user    7.603
+system  0.266
+total   7.828
+```
+
+```json
+{
+    "modulus": 2147483647,
+    "zbits": 21,
+    "coefficients": [1724886998, 287764120, 669496309, 29431304],
+    "initial_state": [23214526, 63888791, 632526187, 515165230]
+}
+```
+
+### level 5
+
+```sh
+ % time sage recover_coefficients__kernel.sage 2113941029 5 85 23 18 --category 2 --level 5 --verbose 1 --block-size 30 --check
+SEED: 13512413672535046818
+
+expect_vectors: 5
+
+kernel rank: 2
+kernel' rank: 2
+
+find k: -24 0
+checking z_i: maybe
+checking c_i: True
+
+================
+CPU     100%
+user    6.491
+system  0.256
+total   6.697
+```
+
+```json
+{
+    "modulus": 2113941029,
+    "zbits": 18,
+    "coefficients": [241592126, 1225700761, 270381722, 1809937814, 545364186],
+    "initial_state": [1265879737, 1938499214, 100295411, 164486483, 782938]
+}
+```
 
 ### level 6
 
 ```sh
- % time sage recover_coefficients__kernel.sage 2140900439 8 90 20 11 --category 2 --level 6 --verbose 1 --block-size 20
+ % time sage recover_coefficients__kernel.sage 2140900439 8 90 20 11 --category 2 --level 6 --verbose 1 --block-size 20 --check
 SEED: 2774189050861033585
 
 expect_vectors: 6
@@ -60,7 +211,7 @@ total   4.403
 ### level 7
 
 ```sh
- % time sage recover_coefficients__kernel.sage 2086596509 10 110 26 11 --category 2 --level 7 --verbose 1 --block-size 20
+ % time sage recover_coefficients__kernel.sage 2086596509 10 110 26 11 --category 2 --level 7 --verbose 1 --block-size 20 --check
 SEED: 4768417682194502211
 
 expect_vectors: 6
@@ -89,7 +240,7 @@ total   9.289
 ### level 8
 
 ```sh
- % time sage recover_coefficients__kernel.sage 2123058169 12 110 28 8 --category 2 --level 8 --verbose 1 --block-size 20
+ % time sage recover_coefficients__kernel.sage 2123058169 12 110 28 8 --category 2 --level 8 --verbose 1 --block-size 20 --check
 SEED: 12270745752118493764
 
 expect_vectors: 5
@@ -118,7 +269,7 @@ total   4.652
 ### level 9
 
 ```sh
- % time sage recover_coefficients__kernel.sage 2147483647 14 128 32 8 --category 2 --level 9 --verbose 1 --block-size 32                  
+ % time sage recover_coefficients__kernel.sage 2147483647 14 128 32 8 --category 2 --level 9 --verbose 1 --block-size 32 --check
 SEED: 8421578719646212792
 
 expect_vectors: 5
