@@ -15,7 +15,6 @@ from sympy.matrices import Matrix, zeros, eye
 from fpylll import FPLLL, IntegerMatrix, BKZ, LLL
 
 from util import read_data, save_solution, matrix_overview
-from sieve_bkz import solve_bkz
 
 
 parser = argparse.ArgumentParser(description=__doc__,
@@ -173,15 +172,7 @@ from sage.all import Matrix, ZZ, vector
 # M = M.left_kernel().basis_matrix()
 
 B = IntegerMatrix.from_matrix(M)
-if not args.sieve:
-    BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=bkz_flags))
-else:
-    B = solve_bkz(
-        B,
-        threads=THREADS, # fake
-        verbose=(VERBOSE >= 2),
-        blocksizes=f"20:{args.block_size}:2"
-    )
+BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=bkz_flags))
 
 
 if DEBUG or VERBOSE >= 3:

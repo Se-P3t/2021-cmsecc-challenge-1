@@ -17,7 +17,6 @@ from fpylll import FPLLL, IntegerMatrix, BKZ, LLL
 
 from util import read_data, save_solution, matrix_overview, str_mat
 from sieve_asvp import solve_asvp
-from sieve_bkz import solve_bkz
 
 
 parser = argparse.ArgumentParser(description=__doc__,
