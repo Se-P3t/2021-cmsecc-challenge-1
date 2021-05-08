@@ -8,9 +8,5 @@ svpchallenge
 *.mat
 ~*.md
 
-*.zip
-bkzcache
-svpc_*
-a.out
-challenge-*
-LWE_*
+*.rar
+hlll
