@@ -14,11 +14,11 @@ int main(int argc, char *argv[])
         ("out", "file to output lll-reduced matrix (overwrite the input file "
           "when not specified)", cxxopts::value<std::string>())
         ("threads", "threads", cxxopts::value<int>()->default_value("1"))
-        ("seysen", "use Seysen reduction", cxxopts::value<bool>()
-          ->implicit_value("true")->default_value("false"))
+        //("seysen", "use Seysen reduction", cxxopts::value<bool>()
+        //  ->implicit_value("true")->default_value("false"))
 
-        ("precision", "bit precision to use",
-          cxxopts::value<unsigned int>()->default_value("53"))
+        //("precision", "bit precision to use",
+        //  cxxopts::value<unsigned int>()->default_value("53"))
 
         ("delta", "LLL: delta", cxxopts::value<double>()
           ->default_value("0.999"))
@@ -47,9 +47,9 @@ int main(int argc, char *argv[])
         output_file = args["out"].as<std::string>();;
     }
     int threads = args["threads"].as<int>();
-    bool seysen = args["seysen"].as<bool>();
+    //bool seysen = args["seysen"].as<bool>();
 
-    unsigned int precision = args["precision"].as<unsigned int>();
+    //unsigned int precision = args["precision"].as<unsigned int>();
 
     double delta = args["delta"].as<double>();
     int threshold = args["threshold"].as<int>();
@@ -81,9 +81,10 @@ int main(int argc, char *argv[])
     AT.resize(A.get_cols(), A.get_rows());
     transpose(AT, A);
     Lattice<integer_t, dpe_t, MatrixZT, MatrixFT> B(AT, NO_TRANSFORM,
-      seysen ? SEYSEN_REDUCTION : DEF_REDUCTION);
+      DEF_REDUCTION);
+    //  seysen ? SEYSEN_REDUCTION : DEF_REDUCTION);
     B.set_num_S(threads, threshold);
-    B.setprec(precision);
+    //B.setprec(precision);
 
     B.hlll(delta, verbose);
     transpose(A, B.getbase());

@@ -17,8 +17,6 @@ def hlll_wrapper(A, threads=4, threshold=40, **kwds):
     :param A: an `IntegerMatrix` or `list`
     :param threads: ... (default: 4)
     :param threshold: block size threshold for parallelism (default: 40)
-    :param seysen: use Seysen reduction (default: False)
-    :param precision: bit precision to use (default: 53)
     :param delat: LLL parameter delta, 0 < \delta < 1 (default: 0.999)
     :param verbose: print verbose info (default: False)
     """
@@ -37,10 +35,7 @@ def hlll_wrapper(A, threads=4, threshold=40, **kwds):
 
     command = f"./hlll {tmpfile} "
     command += f"--threads {threads} "
-    command += f"--precision {kwds.pop('precision', 53)} "
     command += f"--delta {kwds.pop('delts', 0.999)} "
-    if kwds.pop('seysen', False):
-        command += "--seysen "
     if kwds.pop('verbose', False):
         command += "--verbose "
 
