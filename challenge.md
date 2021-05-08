@@ -301,8 +301,9 @@ total   10.004
 ### level 1
 
 ```sh
- % time sage recover_modulus__kernel.sage 31 16 140 30 5 --category 3 --level 1 --verbose 1 --block-size 20 --check
-SEED: 16523409129047591076
+ % time sage recover_modulus__kernel.sage 31 16 140 30 5 --category 3 --level 1 --verbose 1 --block-size 20 --check                                           
+SEED: 10019631545210073147
+USE_SUBS: False
 
 find the kernel (rank 110)
 
@@ -318,10 +319,10 @@ finding modulus
 checking c_i: True
 
 ================
-CPU     292%
-user    1:26.83
-system  0.520
-total   29.903
+CPU     278%
+user    1:25.33
+system  0.483
+total   30.772
 ```
 
 ```json
@@ -336,8 +337,9 @@ total   29.903
 ### level 2
 
 ```sh
- % time sage recover_modulus__kernel.sage 31 16 190 40 10 --category 3 --level 2 --verbose 1 --block-size 30 --check
-SEED: 13049695382207653781
+ % time sage recover_modulus__kernel.sage 31 16 190 40 10 --category 3 --level 2 --verbose 1 --block-size 30 --check            
+SEED: 2732523400034528389
+USE_SUBS: False
 
 find the kernel (rank 150)
 
@@ -353,10 +355,10 @@ finding modulus
 checking c_i: True
 
 ================
-CPU     316%
-user    3:36.68
-system  0.746
-total   1:08.64
+CPU     318%
+user    3:57.23
+system  0.699
+total   1:14.81
 ```
 
 ```json

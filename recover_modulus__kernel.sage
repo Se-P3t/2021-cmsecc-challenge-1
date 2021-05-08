@@ -54,15 +54,19 @@ r = args.r
 t = args.t
 zbits = args.zbits
 
+USE_SUBS = False
+if 2*zbits > mbits + 2: # roughly check
+    USE_SUBS = True
+
 if not (r > t > n):
     raise ValueError("r > t > n")
 
 
 """ verbose level
-0: no output
+0: solution bound check
 1: basic param
 2: print norm
-3: matrix_overview of reduced basis
+3: 
 4: 
 5: verbose when BKZ
 """
@@ -70,7 +74,9 @@ VERBOSE = args.verbose
 THREADS = args.threads
 SEED = args.seed or int.from_bytes(os.urandom(8), 'big')
 if VERBOSE >= 1:
-    print(f"SEED: {SEED}\n")
+    print(f"SEED: {SEED}")
+    print(f"USE_SUBS: {USE_SUBS}")
+    print()
 set_random_seed(SEED)
 
 
@@ -116,7 +122,7 @@ bkz_flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
 if VERBOSE >= 5:
     bkz_flags |= BKZ.VERBOSE
 
-def left_kernel_lll(M, expect_rank):
+def left_kernel_lll(M:list, expect_rank) -> list:
     r = len(M)
     t = len(M[0])
     MM = max(M[0])
@@ -128,13 +134,16 @@ def left_kernel_lll(M, expect_rank):
     )
     M = [[M[i,j] for j in range(M.ncols())] for i in range(M.nrows())]
 
+    shuffle(M)
     B = hlll_wrapper(M, threads=THREADS, threshold=args.threshold)
     M = []
     for i, row in enumerate(B):
         if any(row[:t]):
             if i < expect_rank:
                 # LLL not enough
-                # matrix_overview(B)
+                #matrix_overview(B)
+                if VERBOSE >= 1:
+                    print(f"got non-zero at row {i}")
                 M = B
                 break
             if VERBOSE >= 1:
@@ -142,11 +151,13 @@ def left_kernel_lll(M, expect_rank):
             return M
         M.append(list(row[t:]))
 
+    # maybe never run
     if VERBOSE >= 1:
         print("unfortunately, we cannot find the kernel after hLLL")
-    for blk in range(3, 10): # maybe never run
-        BKZ.reduction(B,BKZ.EasyParam(block_size=blk, flags=bkz_flags))
-        if not any(B[expect_rank-1][:t]):
+    B = IntegerMatrix.from_matrix(B)
+    for blk in range(3, 10):
+        BKZ.reduction(B, BKZ.EasyParam(block_size=blk, flags=bkz_flags))
+        if not any(list(B[expect_rank-1])[:t]):
             M = [list(B[i][t:]) for i in range(expect_rank)]
             if VERBOSE >= 1:
                 print(f"find the kernel (rank {expect_rank})\n")
@@ -157,14 +168,27 @@ def left_kernel_lll(M, expect_rank):
 
 
 M = [[0]*t for _ in range(r)]
+if USE_SUBS:
+    M1 = [[0]*t for _ in range(r)]
 for i in range(r):
     for j in range(t):
         M[i][j] = y_[i+j]
+        if USE_SUBS:
+            M1[i][j] = (y_[i+j]*2+1)
 
 B = left_kernel_lll(M, r-t)
+if USE_SUBS:
+    B1 = left_kernel_lll(M1, r-t)
 
-B = IntegerMatrix.from_matrix(B)
-BKZ.reduction(B,BKZ.EasyParam(block_size=args.block_size, flags=bkz_flags))
+try:
+    B = IntegerMatrix.from_matrix(B)
+    BKZ.reduction(B,BKZ.EasyParam(block_size=args.block_size, flags=bkz_flags))
+    if USE_SUBS:
+        B1 = IntegerMatrix.from_matrix(M1)
+        BKZ.reduction(B1, BKZ.EasyParam(block_size=args.block_size, flags=bkz_flags))
+except KeyboardInterrupt:
+    IPython.embed()
+    exit(int(-1))
 
 expect_vectors = ceil((r+t-1)/t)#+1
 if VERBOSE >= 1:
@@ -172,8 +196,12 @@ if VERBOSE >= 1:
     print()
 
 ETA = []
+if USE_SUBS:
+    ETA1 = []
 for i in range(B.nrows):
     eta = list(B[i])
+    if USE_SUBS:
+        eta1 = list(B1[i])
 
     if VERBOSE >= 2:
         if SOL is not None:
@@ -183,13 +211,17 @@ for i in range(B.nrows):
             print(i, sum(e*e for e in eta)//r)
 
     if SOL is not None:
-        if sum(e*a for e, a in zip(eta, STATE)) != 0:
+        if (sum(e*a for e, a in zip(eta, STATE)) != 0 or (
+            USE_SUBS and sum(e*a for e, a in zip(eta1, STATE)) != 0
+        )):
             if i >= expect_vectors:
                 break
-            raise ValueError("we need `\sum_i \eta_i A_i = 0`")
+            raise ValueError(r"we need `\sum_i \eta_i A_i = 0`")
 
     if SOL is not None or i < expect_vectors:
         ETA.append(eta)
+        if USE_SUBS:
+            ETA1.append(eta1)
 
 if VERBOSE >= 2:
     print()
@@ -197,34 +229,90 @@ if VERBOSE >= 2:
 ETA_m = IntegerMatrix.from_matrix(ETA, int_type='mpz')
 LLL.reduction(ETA_m)
 ETA = [list(b) for b in ETA_m if any(list(b))]
+if USE_SUBS:
+    ETA_m1 = IntegerMatrix.from_matrix(ETA1, int_type='mpz')
+    LLL.reduction(ETA_m1)
+    ETA1 = [list(b) for b in ETA_m1 if any(list(b))]
+
 
 if SOL is not None:
     assert len(ETA) >= expect_vectors, f"rank ETA: {len(ETA)}"
+    if USE_SUBS:
+        assert len(ETA1) >= expect_vectors, f"rank ETA': {len(ETA1)}"
+
 
 M = [[0]*t*expect_vectors for _ in range(r+t-1)]
+if USE_SUBS:
+    M1 = [[0]*t*expect_vectors for _ in range(r+t-1)]
 for j in range(t):
     for i in range(r):
         for a in range(expect_vectors):
             M[j+i][expect_vectors*j+a] = ETA[a][i]
+            if USE_SUBS:
+                M1[j+i][expect_vectors*j+a] = ETA1[a][i]
 B = left_kernel_lll(M, 2)
-
 B = Matrix(ZZ, B).LLL()
+if USE_SUBS:
+    B1 = left_kernel_lll(M1, 2)
+    B1 = Matrix(ZZ, B1).LLL()
 
 nrows = B.nrows()
+if USE_SUBS:
+    nrows1 = B1.nrows()
 if VERBOSE >= 1:
     print(f"kernel rank: {nrows}")
+    if USE_SUBS:
+        print(f"kernel' rank: {nrows1}")
     print()
-assert 0 < nrows <= 2
 
 if DEBUG and input('embed? '):
     IPython.embed()
     if input("exit? "):
         exit(int(0))
 
+assert nrows == 2, r"some `\eta` are wrong"
+if USE_SUBS:
+    assert nrows1 == 2, r"some `\eta` are wrong"
+
+if USE_SUBS:
+    for code in range(1 << 3):
+        M = Matrix(ZZ, [
+            list(B[0] if B[0,0] > 0 else -B[0]), # y
+            list(-B[1] if (code >> 1)&1 else B[1]), # \pm (z + k_1 y)
+            list(e-2**(zbits-1) if code & 1 else e+2**(zbits-1)
+                for e in B1[1]), # \pm (z + k_2(2y+1))
+            [1]*B.ncols() # 1
+        ])
+        v = M.left_kernel().basis_matrix()
+        assert v.nrows() == 1
+        v = copy(v[0])
+        assert abs(v[1]) == abs(v[2]) == 1
+        if v[1] == v[2]:
+            continue
+        v *= v[1]
+        k2 = v[3]
+        k1 = -2*k2 + v[0] if (code >> 2)&1 else 2*k2 - v[0]
+        b = B[1] - k1*B[0]
+        if b[0] < 0:
+            b *= -1
+        if min(b) < 0 or max(b) >= 2**zbits:
+            continue
+        try:
+            _ = B1.solve_left(vector(ZZ, [zi-2**(zbits-1) for zi in b]))
+            print("find k:", k1, k2)
+            break
+        except ValueError:
+            continue
+    else:
+        print("cannot find `z_i`")
+        if DEBUG and input('embed? '):
+            IPython.embed()
+        exit(int(-1))
+else:
+    b = B[0]
+    if b[0] < 0:
+        b *= -1
 print("checking z_i:", end=' ')
-b = B[0]
-if b[0] < 0:
-    b *= -1
 if SOL is not None:
     res = (tuple(z_) == tuple(b))
     print(res)
