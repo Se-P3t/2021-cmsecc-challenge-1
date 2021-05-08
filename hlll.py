@@ -17,7 +17,7 @@ def hlll_wrapper(A, threads=4, threshold=40, **kwds):
     :param A: an `IntegerMatrix` or `list`
     :param threads: ... (default: 4)
     :param threshold: block size threshold for parallelism (default: 40)
-    :param delat: LLL parameter delta, 0 < \delta < 1 (default: 0.999)
+    :param delta: LLL parameter delta, 0 < \delta < 1 (default: 0.999)
     :param verbose: print verbose info (default: False)
     """
     if not os.path.exists("hlll"):
@@ -35,7 +35,8 @@ def hlll_wrapper(A, threads=4, threshold=40, **kwds):
 
     command = f"./hlll {tmpfile} "
     command += f"--threads {threads} "
-    command += f"--delta {kwds.pop('delts', 0.999)} "
+    command += f"--threshold {threshold} "
+    command += f"--delta {kwds.pop('delta', 0.999)} "
     if kwds.pop('verbose', False):
         command += "--verbose "
 

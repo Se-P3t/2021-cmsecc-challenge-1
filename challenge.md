@@ -302,9 +302,13 @@ total   10.004
 
 ```sh
  % time sage recover_modulus__kernel.sage 31 16 140 30 5 --category 3 --level 1 --verbose 1 --block-size 20 --check
-SEED: 4630477721370439504
+SEED: 16523409129047591076
+
+find the kernel (rank 110)
 
 expect_vectors: 6
+
+find the kernel (rank 2)
 
 kernel rank: 2
 
@@ -314,10 +318,10 @@ finding modulus
 checking c_i: True
 
 ================
-CPU     100%
-user    1:05.23
-system  0.334
-total   1:05.57
+CPU     292%
+user    1:26.83
+system  0.520
+total   29.903
 ```
 
 ```json
@@ -333,9 +337,13 @@ total   1:05.57
 
 ```sh
  % time sage recover_modulus__kernel.sage 31 16 190 40 10 --category 3 --level 2 --verbose 1 --block-size 30 --check
-SEED: 5206466853635617849
+SEED: 13049695382207653781
+
+find the kernel (rank 150)
 
 expect_vectors: 6
+
+find the kernel (rank 2)
 
 kernel rank: 2
 
@@ -345,10 +353,10 @@ finding modulus
 checking c_i: True
 
 ================
-CPU     99%
-user    16:42.22
-system  0.433
-total   16:42.74
+CPU     316%
+user    3:36.68
+system  0.746
+total   1:08.64
 ```
 
 ```json

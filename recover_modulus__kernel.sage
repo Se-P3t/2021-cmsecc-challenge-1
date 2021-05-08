@@ -11,6 +11,7 @@ import IPython
 from fpylll import FPLLL, IntegerMatrix, BKZ, LLL
 
 from util import read_data, save_solution, matrix_overview
+from hlll import hlll_wrapper
 
 
 parser = argparse.ArgumentParser(description=__doc__,
@@ -28,15 +29,19 @@ parser.add_argument('--experiment', action='store_true', dest="experiment",
                     help="auto generate data and test the code")
 parser.add_argument('-v', '--verbose', type=int, dest="verbose", default=0,
                     help="verbose level")
+parser.add_argument('--threads', type=int, dest="threads", default=4, help="threads")
 parser.add_argument('--seed',  type=int, dest="seed", default=0,
                     help="randomness seed (0 for auto choose)")
 parser.add_argument('--debug', action='store_true', dest="debug",
                     help="call IPython.embed when running")
 parser.add_argument('--check', action='store_true', dest="check",
                     help="check the solution")
+# args for hpLLL
+parser.add_argument('--threshold', type=int, dest="threshold", default=40,
+                    help="HLLL: block size threshold for parallelism")
 # args for BKZ
 parser.add_argument('--block-size', type=int, dest="block_size", default=20,
-                    help="BKZ block size")
+                    help="BKZ: block size")
 
 args, _ = parser.parse_known_args()
 
@@ -62,6 +67,7 @@ if not (r > t > n):
 5: verbose when BKZ
 """
 VERBOSE = args.verbose
+THREADS = args.threads
 SEED = args.seed or int.from_bytes(os.urandom(8), 'big')
 if VERBOSE >= 1:
     print(f"SEED: {SEED}\n")
@@ -106,43 +112,68 @@ else:
     SOL = None
 
 
-MM = 1 << (mbits - zbits)
-BB = ceil((2*MM*r)**(t/(r-t)))
-KK = ceil(sqrt(r)*2**((r-1)/2) * BB)
-
 bkz_flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
 if VERBOSE >= 5:
     bkz_flags |= BKZ.VERBOSE
 
-ETA = []
+def left_kernel_lll(M, expect_rank):
+    r = len(M)
+    t = len(M[0])
+    MM = max(M[0])
+    BB = ceil((2*MM*r)**(t/(r-t)))
+    KK = ceil(sqrt(r)*2**((r-1)/2) * BB)
 
-M = [[0]*(t+r) for _ in range(r)]
+    M = block_matrix(ZZ,
+        [[Matrix(ZZ, M)*KK, identity_matrix(r)]]
+    )
+    M = [[M[i,j] for j in range(M.ncols())] for i in range(M.nrows())]
+
+    B = hlll_wrapper(M, threads=THREADS, threshold=args.threshold)
+    M = []
+    for i, row in enumerate(B):
+        if any(row[:t]):
+            if i < expect_rank:
+                # LLL not enough
+                # matrix_overview(B)
+                M = B
+                break
+            if VERBOSE >= 1:
+                print(f"find the kernel (rank {expect_rank})\n")
+            return M
+        M.append(list(row[t:]))
+
+    if VERBOSE >= 1:
+        print("unfortunately, we cannot find the kernel after hLLL")
+    for blk in range(3, 10): # maybe never run
+        BKZ.reduction(B,BKZ.EasyParam(block_size=blk, flags=bkz_flags))
+        if not any(B[expect_rank-1][:t]):
+            M = [list(B[i][t:]) for i in range(expect_rank)]
+            if VERBOSE >= 1:
+                print(f"find the kernel (rank {expect_rank})\n")
+            return M
+
+    raise RuntimeError("what")
+
+
+
+M = [[0]*t for _ in range(r)]
 for i in range(r):
     for j in range(t):
-        M[i][j] = y_[i+j] *KK
-    M[i][t+i] = 1
+        M[i][j] = y_[i+j]
 
-if DEBUG and VERBOSE >= 3:
-    matrix_overview(M)
+B = left_kernel_lll(M, r-t)
 
-
-B = IntegerMatrix.from_matrix(M)
-BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=bkz_flags))
-if VERBOSE >= 3:
-    matrix_overview(B)
+B = IntegerMatrix.from_matrix(B)
+BKZ.reduction(B,BKZ.EasyParam(block_size=args.block_size, flags=bkz_flags))
 
 expect_vectors = ceil((r+t-1)/t)#+1
 if VERBOSE >= 1:
     print(f"expect_vectors: {expect_vectors}")
     print()
 
+ETA = []
 for i in range(B.nrows):
-    b = list(B[i])
-    if any(b[:t]):
-        if i >= expect_vectors:
-            break
-        raise ValueError("we need `\sum_i \eta_i Y_i = 0`")
-    eta = list(b[t:])
+    eta = list(B[i])
 
     if VERBOSE >= 2:
         if SOL is not None:
@@ -170,12 +201,14 @@ ETA = [list(b) for b in ETA_m if any(list(b))]
 if SOL is not None:
     assert len(ETA) >= expect_vectors, f"rank ETA: {len(ETA)}"
 
-M = Matrix(ZZ, r+t-1, t*expect_vectors)
+M = [[0]*t*expect_vectors for _ in range(r+t-1)]
 for j in range(t):
     for i in range(r):
         for a in range(expect_vectors):
-            M[j+i, expect_vectors*j+a] = ETA[a][i]
-B = M.left_kernel(basis="LLL").basis_matrix()
+            M[j+i][expect_vectors*j+a] = ETA[a][i]
+B = left_kernel_lll(M, 2)
+
+B = Matrix(ZZ, B).LLL()
 
 nrows = B.nrows()
 if VERBOSE >= 1:
