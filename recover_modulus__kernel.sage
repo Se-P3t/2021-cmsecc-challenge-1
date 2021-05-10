@@ -10,7 +10,7 @@ import IPython
 
 from fpylll import FPLLL, IntegerMatrix, BKZ, LLL
 
-from util import read_data, save_solution, matrix_overview
+from util import read_data, save_solution, matrix_overview, str_mat
 from hlll import hlll_wrapper
 
 
@@ -118,6 +118,17 @@ else:
     SOL = None
 
 
+if DEBUG and args.experiment and input('embed? '):
+    tmpfile = f"exp-{SEED}-{mbits}-{n}-{r}-{t}-{zbits}.mat"
+    if os.path.exists(tmpfile):
+        A = IntegerMatrix.from_file(tmpfile)
+        print(f"Loaded tmpfile {tmpfile} :: {A.nrows} x {A.ncols}")
+    IPython.embed()
+    if input("exit? "):
+        exit(int(0))
+
+
+
 bkz_flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
 if VERBOSE >= 5:
     bkz_flags |= BKZ.VERBOSE
@@ -148,22 +159,18 @@ def left_kernel_lll(M:list, expect_rank) -> list:
                 break
             if VERBOSE >= 1:
                 print(f"find the kernel (rank {expect_rank})\n")
+            if expect_rank != 2:
+                tmpfile = f"eta-{args.category}-{args.level}.mat"
+                if args.experiment:
+                    tmpfile = f"exp-{SEED}-{mbits}-{n}-{r}-{t}-{zbits}.mat"
+                open(tmpfile, "w").write(
+                    f"[{str_mat(M)}]"
+                )
             return M
         M.append(list(row[t:]))
 
-    # maybe never run
-    if VERBOSE >= 1:
-        print("unfortunately, we cannot find the kernel after hLLL")
-    B = IntegerMatrix.from_matrix(B)
-    for blk in range(3, 10):
-        BKZ.reduction(B, BKZ.EasyParam(block_size=blk, flags=bkz_flags))
-        if not any(list(B[expect_rank-1])[:t]):
-            M = [list(B[i][t:]) for i in range(expect_rank)]
-            if VERBOSE >= 1:
-                print(f"find the kernel (rank {expect_rank})\n")
-            return M
-
-    raise RuntimeError("what")
+    # more precisely, there is at least one \eta not work
+    raise RuntimeError("cannot find the kernel, expect rank too large")
 
 
 
