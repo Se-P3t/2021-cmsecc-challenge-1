@@ -59,14 +59,18 @@ def asvp_kernel(arg0, params=None, seed=None):
     tracer = SieveTreeTracer(g6k, root_label=("svp-challenge", n), start_clocks=True)
 
     gh = gaussian_heuristic([g6k.M.get_r(i, i) for i in range(n)])
-    goal_r0 = workout_params.pop('goal_r0')
-
-    if goal_r0 == 0:
-        goal_r0 = (goal_r0__gh**2) * gh
+    goal_r0 = workout_params.pop('goal_r0', (goal_r0__gh**2) * gh)
     if verbose:
-        print(("gh = %f, goal_r0 = %f, r0 = %f" % (gh, goal_r0, sum([x*x for x in A[0]]))))
- 
-    flast = workout(g6k, tracer, 0, n, goal_r0=goal_r0, **workout_params)
+        print(
+            (
+                "gh = %f, goal_r0/gh = %f, r0/gh = %f"
+                % (gh, goal_r0 / gh, sum([x * x for x in A[0]]) / gh)
+            )
+        )
+
+    flast = workout(
+        g6k, tracer, 0, n, goal_r0=goal_r0, pump_params=pump_params, **workout_params
+    )
 
     tracer.exit()
     stat = tracer.trace
@@ -85,14 +89,20 @@ def asvp_kernel(arg0, params=None, seed=None):
 
 
 def asvp(n, params, threads, **kwds):
-    lower_bound = kwds.get("lower_bound", n) # lowest lattice dimension to consider (inclusive)
-    upper_bound = kwds.get("upper_bound", 0) # upper bound on lattice dimension to consider (exclusive)
-    step_size = kwds.get("step_size", 2) # increment lattice dimension in these steps
-    trials = kwds.get("trials", 1) # number of experiments to run per dimension
-    workers = kwds.get("workers", 1) # number of parallel experiments to run
-    seed = kwds.get("seed", 0) # randomness seed
+    lower_bound = kwds.pop("lower_bound", n) # lowest lattice dimension to consider (inclusive)
+    upper_bound = kwds.pop("upper_bound", 0) # upper bound on lattice dimension to consider (exclusive)
+    step_size = kwds.pop("step_size", 2) # increment lattice dimension in these steps
+    trials = kwds.pop("trials", 1) # number of experiments to run per dimension
+    workers = kwds.pop("workers", 1) # number of parallel experiments to run
+    seed = kwds.pop("seed", 0) # randomness seed
 
+    dry_run = kwds.pop('dry_run', False)
+    for k, v in six.iteritems(kwds):
+        params[k] = v
     all_params = OrderedDict({f"'threads': {threads}, ": params})
+    if dry_run:
+        print(all_params)
+        exit(0)
 
     stats = run_all(asvp_kernel, list(all_params.values()),
                     lower_bound=lower_bound,
@@ -107,8 +117,12 @@ def asvp(n, params, threads, **kwds):
 
     fmt = "{name:20s} :: n: {n:2d}, cputime {cputime:7.4f}s, walltime: {walltime:7.4f}s, "\
           "flast: {flast:3.2f}, |db|: 2^{avg_max:.2f}"
-    print_stats(fmt, stats, ("cputime", "walltime", "flast", "avg_max"),
-                extractf={"avg_max": lambda n, params, stat: db_stats(stat)[0]})
+    print_stats(
+        fmt,
+        stats,
+        ("cputime", "walltime", "flast", "avg_max"),
+        extractf={"avg_max": lambda n, params, stat: db_stats(stat)[0]}
+    )
 
     res = list(stats.values())[0][0].data['res']
 
@@ -123,7 +137,6 @@ def solve_asvp(A, **kwds):
     :param keep_tmpfile: keep the reduced matrix (default: False)
     :param load_matrix: filename for temp matrix file
     :param verbose: ... (default: True)
-    :param workout__dim4free_dec: By how much do we decreaseee dim4free at each iteration (default: 3)
     :param goal_r0__gh: ... Quit when this is reached (default: 1.05)
     """
     if isinstance(A, list):
@@ -139,28 +152,24 @@ def solve_asvp(A, **kwds):
     threads = kwds.pop('threads', 4)
     load_matrix = kwds.pop('load_matrix', f'svpchallenge-{n}.txt')
     verbose = kwds.pop('verbose', True)
-    workout__dim4free_dec = kwds.pop('workout__dim4free_dec', 3)
     goal_r0__gh = kwds.pop('goal_r0__gh', 1.05)
-    goal_r0 = kwds.pop("goal_r0", 0)
 
     params = SieverParams(threads=threads,
                           load_matrix=load_matrix,
                           verbose=verbose)
-    params['workout/dim4free_dec'] = workout__dim4free_dec
-    params['workout/save_prefix'] = f"/tmp/asvp-{n}"
-    params['workout/goal_r0'] = goal_r0
     params['goal_r0__gh'] = goal_r0__gh
 
     with open(load_matrix, 'w') as f:
         f.write(str_mat(A))
 
-    res = asvp(n, params, threads, **kwds)
-
-    if keep_tmpfile:
-        with open(load_matrix, 'w') as f:
-            f.write(str_mat(res))
-    else:
-        os.system(f'rm -f {load_matrix}')
+    try:
+        res = asvp(n, params, threads, **kwds)
+    finally:
+        if keep_tmpfile:
+            with open(load_matrix, 'w') as f:
+                f.write(str_mat(res))
+        else:
+            os.system(f'rm -f {load_matrix}')
 
     if return_list:
         B = [[res[i,j] for j in range(res.ncols)] for i in range(res.nrows)]
