@@ -48,15 +48,6 @@ $$
 ||b_1||_2 \leq 2^{d/4} z^{-1} m^{1+\frac{d-n}{d+1}}
 $$
 
-#### problem
-
-the bound for $||\eta||$ is too ambiguous
-
-#### improvement
-
-set $Y_i' := 2Y_i + 1$, then $U = \sum_i \eta_i A_i = 2^{k-1} \sum_i \eta_i Y_i' + \sum_i \eta_i (Z_i - 2^{k-1})$. since $||Z_i-2^{k-1}|| < \sqrt{rt} 2^{k-1}$
-
-TODO: compare the performance
 
 
 
@@ -143,7 +134,27 @@ we did not use `m`, can we do better
 
 ### [recover_modulus.py](./recover_modulus.py)
 
-TODO
+TODO: code
+
+#### improvement
+
+set $Y_i' := 2Y_i + 1$, then $U = \sum_i \eta_i A_i = 2^{k-1} \sum_i \eta_i Y_i' + \sum_i \eta_i (Z_i - 2^{k-1})$. since $||Z_i-2^{k-1}|| < \sqrt{rt} 2^{k-1}$
+
+TODO: compare the performance
+
+#### problem
+
+the bound for $||\eta||$ is too ambiguous, we need to choose $r$ and $t$ manually
+
+
+$$
+\begin{aligned}
+|u_i| = \sum_{j=0}^{r-1} \eta_j z_{i+j} &= \sum_{j=0}^{r-1} \eta_j (z_{i+j}-2^{zbits-1}) + 2^{zbits-1} \sum_{j=0}^{r-1} \eta_j \\
+&< 2^{zbits-1}(\sqrt{r} ||\vec \eta|| + \sum_{j=0}^{r-1} \eta_j)
+\end{aligned}
+$$
+
+
 
 ### [recover_modulus__kernel.sage](./recover_modulus__kernel.sage)
 
