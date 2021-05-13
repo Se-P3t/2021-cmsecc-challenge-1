@@ -6,7 +6,7 @@ svpchallenge
 *.pyc
 *.sage.py
 *.mat
-~*.md
+.~*.md
 
 *.rar
 hlll
