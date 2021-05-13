@@ -61,7 +61,7 @@ def workout(g6k, tracer, kappa, blocksize, dim4free_min=0,              # Main p
 
             if verbose:
                 r0 = g6k.M.get_r(kappa, kappa)
-                print("T:%10.5fs, TT:%10.5fs, r0:%10.5f r0/gh:%10.5f" %
+                print("T:%10.5fs, TT:%10.5fs, r0:%10.5e r0/gh:%10.5f" %
                       (time.time() - timestart,
                        time.time() - runtimestart, r0, r0 / gh))
 
