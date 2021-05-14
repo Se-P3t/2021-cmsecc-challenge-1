@@ -98,8 +98,17 @@ sieve_param = {
 if (args.category is None) or (args.level is None):
     if not args.experiment:
         raise ValueError("Undefined behavior")
-    # TODO: test the code
-    raise NotImplementedError
+    INIT_STATE = [random.randint(0, m-1) for _ in range(n)]
+    if VERBOSE >= 1:
+        print(f"initial state: {INIT_STATE}")
+        print()
+    STATE = copy(INIT_STATE)
+    for j in range(n, d):
+        a_j = sum(c_i*a_i for c_i, a_i in zip(coeffs, STATE[-n:])) % m
+        STATE.append(a_j)
+    y_ = [a_i >> zbits for a_i in STATE]
+    z_ = [a_i % 2**zbits for a_i in STATE]
+    SOL = tuple(INIT_STATE)
 else:
     y_ = read_data(args.category, args.level)
     if len(y_) < d:
@@ -159,8 +168,6 @@ def check(initial_state):
 
 def find_solution(B):
     nrows = B.nrows
-    if SOL is not None:
-        print(f"SOL: {SOL}")
 
     for idx, b in enumerate(B):
         b = list(b)
@@ -182,7 +189,7 @@ def find_solution(B):
         if SOL is None:
             res = check(a_)
         else:
-            res = tuple(z_) == SOL
+            res = tuple(a_) == SOL
         if VERBOSE >= 1:
             print(f"row {idx+1}/{nrows}:: {res}")
         if res:
