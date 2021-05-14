@@ -2,6 +2,15 @@
 
 ## category 1
 
+### reading list
+
+- [**The General Sieve Kernel and New Records in Lattice Reduction**](https://eprint.iacr.org/2019/089)
+- [**On Bounded Distance Decoding with Predicate: Breaking the "Lattice Barrier" for the Hidden Number Problem**](https://eprint.iacr.org/2020/1540) https://github.com/malb/bdd-predicate
+- [**Advanced Lattice Sieving on GPUs, with Tensor Cores**](https://eprint.iacr.org/2021/141) https://github.com/WvanWoerden/G6K-GPU-Tensor
+- [**Guessing Bits: Improved Lattice Attacks on (EC)DSA**](https://eprint.iacr.org/2021/455)
+- [**Lattice Enumeration on GPUs for fplll**](https://eprint.iacr.org/2021/430) https://github.com/FeanorTheElf/fplll-CUDA-enumeration
+- [**Dual lattice attacks for closest vector problems (with preprocessing)**](https://eprint.iacr.org/2021/557)
+
 ### [recover_initial_state.py](./recover_initial_state.py)
 
 $$
