@@ -41,8 +41,6 @@ parser.add_argument('--debug', action='store_true', dest="debug",
 parser.add_argument('--block-size', type=int, dest="block_size", default=20,
                     help="BKZ block size")
 # args for sieving
-parser.add_argument('-s', '--step-size', type=int, dest="step_size", default=2,
-                    help="increment lattice dimension in these steps")
 parser.add_argument('--workout/dim4free-dec', type=int, dest="workout__dim4free_dec", default=3,
                     help="By how much do we decreaseee dim4free at each iteration")
 parser.add_argument('--goal-r0/gh', type=float, dest="goal_r0__gh", default=1.05,
@@ -67,17 +65,34 @@ n = len(coeffs)
 3: matrix_overview of reduced basis
 4: matrix_overview of input basis
 5: verbose when BKZ
-10: print all state
+10: 
 100: 
 """
 VERBOSE = args.verbose
 THREADS = args.threads
 SIEVE = args.sieve
 SEED = args.seed or int.from_bytes(os.urandom(8), 'big')
+random.seed(SEED)
 if VERBOSE >= 1:
     print(f"SEED: {SEED}\n")
 
 FPLLL.set_threads(THREADS)
+
+bkz_flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
+if VERBOSE >= 5:
+    bkz_flags |= BKZ.VERBOSE
+
+sieve_param = {
+    'threads': THREADS,
+    'verbose': (DEBUG or VERBOSE >= 2),
+    'seed': SEED,
+    #'dry_run': True,
+    'goal_r0__gh': args.goal_r0__gh,
+    'workout/dim4free_dec': args.workout__dim4free_dec,
+    'workout/save_prefix': f'logs/sieve-{args.category}-{args.level}',
+    'workout/start_n': args.block_size+1,
+    'pump/down_sieve': True,
+}
 
 
 if (args.category is None) or (args.level is None):
@@ -89,7 +104,9 @@ else:
     y_ = read_data(args.category, args.level)
     if len(y_) < d:
         raise ValueError(f"outputs is not enough (got {len(y_)}, expect >={d})")
-    #assert max(y_).bit_length() <= mbits - zbits
+    ybits = max(y_).bit_length()
+    if ybits != mbits - zbits:
+        raise ValueError(f"bit length of `y_i` is wrong (got {ybits}, expect {mbits-zbits})")
     SOL = None
 
 Q = zeros(n)
@@ -121,19 +138,22 @@ for j in range(n, d):
 
 
 def check(initial_state):
-    assert len(initial_state) == n
+    if len(initial_state) != n:
+        raise ValueError(f"we only need first {n} internal state to check")
+
     for a_i, y_i in zip(initial_state, y_):
         if a_i >> zbits != y_i:
             return False
+
     state = copy(initial_state)
     for y_j in y_[n:]:
+        # this func will check all the outputs,
+        # no need to run `check.py`
         a_j = sum(a_i*c_i for a_i, c_i in zip(state[-n:], coeffs)) % m
         if a_j >> zbits != y_j:
             return False
         state.append(a_j)
 
-    if DEBUG or VERBOSE >= 10:
-        print(f"\nstate: {state}")
     return True
 
 
@@ -141,6 +161,7 @@ def find_solution(B):
     nrows = B.nrows
     if SOL is not None:
         print(f"SOL: {SOL}")
+
     for idx, b in enumerate(B):
         b = list(b)
         if abs(b[0]) != bias*scale:
@@ -173,7 +194,6 @@ def find_solution(B):
     return None
 
 
-########## build basis matrix ##########
 scale = m >> (zbits-1)
 bias = 1 << (zbits-1)
 
@@ -195,55 +215,34 @@ for j in range(d+1):
 if DEBUG or VERBOSE >= 4:
     matrix_overview(M)
 
-random.seed(SEED)
 random.shuffle(M)
 
-########## BKZ ##########
+
 B = IntegerMatrix.from_matrix(M)
-flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
-if DEBUG or VERBOSE >= 5:
-    flags |= BKZ.VERBOSE
-BKZ.reduction(B, BKZ.EasyParam(block_size=args.block_size, flags=flags))
-#BKZ2(B)(BKZ.EasyParam(block_size=args.block_size, flags=flags))
+BKZ.reduction(B, BKZ.EasyParam(block_size=args.block_size, flags=bkz_flags))
 
-if DEBUG or VERBOSE >= 3:
+if VERBOSE >= 3:
     matrix_overview(B)
 
 if DEBUG and input('embed? '):
     IPython.embed()
 
 a_ = find_solution(B)
-if SOL is None and a_:
-    solution = {
-        'modulus': m,
-        'zbits': zbits,
-        'coefficients': coeffs,
-        'initial_state': a_,
-    }
-    save_solution(args.category, args.level, solution)
+if a_ is not None:
+    if SOL is None:
+        solution = {
+            'modulus': m,
+            'zbits': zbits,
+            'coefficients': coeffs,
+            'initial_state': a_,
+        }
+        save_solution(args.category, args.level, solution)
     exit(0)
-
-########## sieve ##########
-if not SIEVE:
-    exit(-1)
+elif not SIEVE:
+    exit(-1) # cannot find solution after BKZ
 
 
-sieve_param = {
-    'workout/dim4free_dec': args.workout__dim4free_dec,
-    'workout/save_prefix': f'logs/sieve-{args.category}-{args.level}',
-    'workout/start_n': args.block_size+1,
-    'pump/down_sieve': True,
-}
-B = solve_asvp(
-    B,
-    threads=THREADS,
-    verbose=(DEBUG or VERBOSE >= 2),
-    seed=SEED,
-    step_size=args.step_size,
-    goal_r0__gh=args.goal_r0__gh,
-    #dry_run=True,
-    **sieve_param
-)
+B = solve_asvp(B, **sieve_param)
 
 if DEBUG or VERBOSE >= 3:
     matrix_overview(B)
@@ -252,11 +251,14 @@ if DEBUG and input('embed? '):
     IPython.embed()
 
 a_ = find_solution(B)
-if SOL is None and a_:
-    solution = {
-        'modulus': m,
-        'zbits': zbits,
-        'coefficients': coeffs,
-        'initial_state': a_,
-    }
-    save_solution(args.category, args.level, solution)
+if a_ is not None:
+    if SOL is None:
+        solution = {
+            'modulus': m,
+            'zbits': zbits,
+            'coefficients': coeffs,
+            'initial_state': a_,
+        }
+        save_solution(args.category, args.level, solution)
+else:
+    exit(-2) # cannot find solution after SIEVE
