@@ -1,3 +1,5 @@
+for the details on the results, refer to [challenge.md](./challenge.md)
+
 # challenge 1
 
 ## category 1
@@ -65,13 +67,26 @@ $$
 
 ### [recover_coefficients.py](./recover_coefficients.py)
 
-TODO: clean up the code
+TODO: coding
 
 recover the coefficients with given `ETA`
 
 in this category, we're given exactly $r+t-1$ $y_i$'s, which is impossible to reach full rank: in the kernel lattice, we can get at most $r-t$ rows with leading zeros, even if they all satisfy $U_i = \sum_i \eta_i A_i = 0$, we still need more to make $L(g_i)^* = L(g_i)$.
 
 Thus this script is not to be used in this category.
+
+
+### [recover_coefficients__resultant.sage](./recover_coefficients__resultant.sage)
+
+$g_i$ are polynomials, with degree at most $r-n$, sharing the root $(c_0, \ldots, c_{n-1})$ over $\mathbb{Z}/m\mathbb{Z}$
+
+try to solve with resultant
+
+#### result
+
+we need at least two vectors such that $U_i = 0$
+
+however, the degree increases rapidly, and I could only solve the first two level on my laptop
 
 ### [recover_coefficients__kernel.sage](./recover_coefficients__kernel.sage)
 
@@ -138,6 +153,11 @@ moreover, this method cannot be applied to category 1, since $||\vec y||$ is ver
 #### problem 2
 
 we did not use `m`, can we do better
+
+#### result
+
+solve all levels of challenges with fewer BKZ calls (1 or 2 times)
+
 
 ## category 3
 
