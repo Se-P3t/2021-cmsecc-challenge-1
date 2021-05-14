@@ -15,6 +15,11 @@ for the details on the results, refer to [challenge.md](./challenge.md)
 
 ### [recover_initial_state.py](./recover_initial_state.py)
 
+TODO
+
+
+### [recover_initial_state__embedding.py](./recover_initial_state__embedding.py)
+
 $$
 a_i = 2^k y_i + z_i \\
 a_{i+j} = \sum_{l=0}^{n-1} q_{j,l} a_{i+l} \bmod m
@@ -60,7 +65,9 @@ $$
 $$
 
 
+#### result
 
+solve level 1-6 in minutes
 
 
 ## category 2
