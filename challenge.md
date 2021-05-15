@@ -15,7 +15,7 @@ model name      : Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz
 ### level 1
 
 ```sh
- % time python recover_initial_state.py 2147483647 "257,0,0,0,1048576,0,0,0,0,0,2097152,0,0,131072,0,32768" 22 2 --category 1 --level 1 --verbose 1 --block-size 20      
+ % time python recover_initial_state__embedding.py 2147483647 "257,0,0,0,1048576,0,0,0,0,0,2097152,0,0,131072,0,32768" 22 2 --category 1 --level 1 --verbose 1 --block-size 20      
 SEED: 16949532060652715486
 
 row 2/23:: True
@@ -32,7 +32,7 @@ total   0.935
 ### level 2
 
 ```sh
- % time python recover_initial_state.py 2147483647 "257,0,0,0,1048576,0,0,0,0,0,2097152,0,0,131072,0,32768" 23 3 --category 1 --level 2 --verbose 1 --block-size 20
+ % time python recover_initial_state__embedding.py 2147483647 "257,0,0,0,1048576,0,0,0,0,0,2097152,0,0,131072,0,32768" 23 3 --category 1 --level 2 --verbose 1 --block-size 20
 SEED: 15864885015374467406
 
 row 1/24:: True
@@ -49,7 +49,7 @@ total   0.960
 ### level 3
 
 ```sh
- % time python recover_initial_state.py 2147483647 "257,0,0,0,1048576,0,0,0,0,0,2097152,0,0,131072,0,32768" 30 14 --category 1 --level 3 --verbose 1 --block-size 20
+ % time python recover_initial_state__embedding.py 2147483647 "257,0,0,0,1048576,0,0,0,0,0,2097152,0,0,131072,0,32768" 30 14 --category 1 --level 3 --verbose 1 --block-size 20
 SEED: 10677130670124483019
 
 row 1/31:: True
@@ -66,7 +66,7 @@ total   0.994
 ### level 4
 
 ```sh
- % time python recover_initial_state.py 2147483647 "257,0,0,0,1048576,0,0,0,0,0,2097152,0,0,131072,0,32768" 51 21 --category 1 --level 4 --verbose 1 --block-size 20
+ % time python recover_initial_state__embedding.py 2147483647 "257,0,0,0,1048576,0,0,0,0,0,2097152,0,0,131072,0,32768" 51 21 --category 1 --level 4 --verbose 1 --block-size 20
 SEED: 6253750390576407687
 
 row 5/52:: False
@@ -85,7 +85,7 @@ total   1.163
 ### level 5
 
 ```sh
- % time python recover_initial_state.py 2147483647 "257,0,0,0,1048576,0,0,0,0,0,2097152,0,0,131072,0,32768" 75 24 --category 1 --level 5 --verbose 1 --block-size 38
+ % time python recover_initial_state__embedding.py 2147483647 "257,0,0,0,1048576,0,0,0,0,0,2097152,0,0,131072,0,32768" 75 24 --category 1 --level 5 --verbose 1 --block-size 38
 SEED: 8435949126609154252
 
 row 1/76:: True
@@ -102,7 +102,7 @@ total   4.203
 ### level 6
 
 ```sh
- % time python recover_initial_state.py 2147483647 "257,0,0,0,1048576,0,0,0,0,0,2097152,0,0,131072,0,32768" 128 26 --category 1 --level 6 --verbose 2 --block-size 30 --threads 6 --sieve
+ % time python recover_initial_state__embedding.py 2147483647 "257,0,0,0,1048576,0,0,0,0,0,2097152,0,0,131072,0,32768" 128 26 --category 1 --level 6 --verbose 2 --block-size 30 --threads 6 --sieve
 SEED: 18336376286588014776
 
 not found
