@@ -139,8 +139,17 @@ total   1:26.95
 
 ### level 7
 
+for the multi-threaded version, the solution cannot be found after 10 threads run for about 12 hours
 
+```sh
+time python recover_initial_state__embedding.py 2147483647 "257,0,0,0,1048576,0,0,0,0,0,2097152,0,0,131072,0,32768" 150 27 --category 1 --level 7 --verbose 2 --block-size 30 --threads 10 --sieve
+```
 
+while sieving over GPU, a Tesla T4, we can get the results in 2 hours
+
+POC at colab: https://colab.research.google.com/drive/1MwqKIxTzkqJMMD8vx3MhHY0l-8g976rm?usp=sharing
+
+log: https://drive.google.com/file/d/1Y1B7usFfgONYfj78Hnt5POUDI5xMHEXT/view?usp=sharing
 
 ## category 2
 
