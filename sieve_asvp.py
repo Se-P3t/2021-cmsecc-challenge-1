@@ -60,13 +60,19 @@ def asvp_kernel(arg0, params=None, seed=None):
 
     gh = gaussian_heuristic([g6k.M.get_r(i, i) for i in range(n)])
     goal_r0 = workout_params.pop('goal_r0', (goal_r0__gh**2) * gh)
+    r0 = sum([x * x for x in A[0]])
     if verbose:
         print(
             (
                 "gh = %f, goal_r0/gh = %f, r0/gh = %f"
-                % (gh, goal_r0 / gh, sum([x * x for x in A[0]]) / gh)
+                % (gh, goal_r0 / gh, r0 / gh)
             )
         )
+    if (goal_r0__gh * gh > r0):
+        tracer.exit()
+        tracer.trace.data["flast"] = -1
+        tracer.trace.data['res'] = A
+        return tracer.trace
 
     flast = workout(
         g6k, tracer, 0, n, goal_r0=goal_r0, pump_params=pump_params, **workout_params
@@ -76,7 +82,7 @@ def asvp_kernel(arg0, params=None, seed=None):
     stat = tracer.trace
     sol = tuple(A[0])
     stat.data["flast"] = flast
-    tracer.trace.data['res'] = A
+    stat.data['res'] = A
 
     #if verbose:
     #    print(f"svp: sol {sol}")
