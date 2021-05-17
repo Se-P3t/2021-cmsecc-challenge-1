@@ -8,10 +8,11 @@ import argparse
 import subprocess
 import IPython
 
-from fpylll import FPLLL, IntegerMatrix, BKZ, LLL
+from fpylll import FPLLL, IntegerMatrix, BKZ
 
 from util import read_data, save_solution, matrix_overview, str_mat
 from hlll import hlll_wrapper
+from sieve_asvp import solve_asvp
 
 
 parser = argparse.ArgumentParser(description=__doc__,
@@ -30,6 +31,8 @@ parser.add_argument('--experiment', action='store_true', dest="experiment",
 parser.add_argument('-v', '--verbose', type=int, dest="verbose", default=0,
                     help="verbose level")
 parser.add_argument('--threads', type=int, dest="threads", default=4, help="threads")
+parser.add_argument('--sieve', action='store_true', dest="sieve",
+                    help="sieve for asvp when solution is not found after BKZ reduction")
 parser.add_argument('--seed',  type=int, dest="seed", default=0,
                     help="randomness seed (0 for auto choose)")
 parser.add_argument('--debug', action='store_true', dest="debug",
@@ -42,6 +45,13 @@ parser.add_argument('--threshold', type=int, dest="threshold", default=40,
 # args for BKZ
 parser.add_argument('--block-size', type=int, dest="block_size", default=20,
                     help="BKZ: block size")
+# args for sieving
+parser.add_argument('--max-dim', type=int, dest="max_dim", default=128,
+                    help="sieve max dim")
+parser.add_argument('--timeout', type=int, dest="timeout", default=300,
+                    help="sieve timeout")
+parser.add_argument('--workout/dim4free-dec', type=int, dest="workout__dim4free_dec", default=3,
+                    help="By how much do we decreaseee dim4free at each iteration")
 
 args, _ = parser.parse_known_args()
 
@@ -65,8 +75,8 @@ if not (r > t > n):
 """ verbose level
 0: solution bound check
 1: basic param
-2: print norm
-3: 
+2: verbose for sieve
+3: print norm
 4: 
 5: verbose when BKZ
 """
@@ -78,6 +88,7 @@ if VERBOSE >= 1:
     print(f"USE_SUBS: {USE_SUBS}")
     print()
 set_random_seed(SEED)
+FPLLL.set_threads(THREADS)
 
 
 if (args.category is None) or (args.level is None):
@@ -132,6 +143,20 @@ if DEBUG and args.experiment and input('embed? '):
 bkz_flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
 if VERBOSE >= 5:
     bkz_flags |= BKZ.VERBOSE
+
+sieve_param = {
+    'threads': THREADS,
+    'verbose': (DEBUG or VERBOSE >= 2),
+    'seed': SEED,
+    #'dry_run': True,
+    'workout/dim4free_dec': args.workout__dim4free_dec,
+    'workout/save_prefix': f'logs/sieve-{args.category}-{args.level}',
+    'workout/start_n': args.block_size+1,
+    'workout/goal_r0': 0,
+    'workout/dim4free_min': r-t-args.max_dim,
+    'workout/timeout': args.timeout,
+    'pump/down_sieve': True,
+}
 
 def left_kernel_lll(M:list, expect_rank) -> list:
     r = len(M)
@@ -190,9 +215,13 @@ if USE_SUBS:
 try:
     B = IntegerMatrix.from_matrix(B)
     BKZ.reduction(B,BKZ.EasyParam(block_size=args.block_size, flags=bkz_flags))
+    if args.sieve:
+        B = solve_asvp(B, **sieve_param)
     if USE_SUBS:
         B1 = IntegerMatrix.from_matrix(M1)
         BKZ.reduction(B1, BKZ.EasyParam(block_size=args.block_size, flags=bkz_flags))
+        if args.sieve:
+            B1 = solve_asvp(B1, **sieve_param)
 except KeyboardInterrupt:
     IPython.embed()
     exit(int(-1))
@@ -206,11 +235,13 @@ ETA = []
 if USE_SUBS:
     ETA1 = []
 for i in range(B.nrows):
+    if SOL is None and i >= expect_vectors:
+        break
     eta = list(B[i])
     if USE_SUBS:
         eta1 = list(B1[i])
 
-    if VERBOSE >= 2:
+    if VERBOSE >= 3:
         if SOL is not None:
             print(i, sum(e*e for e in eta)//r, sum(e*a for e, a in zip(eta, STATE)),
                   sum(e*y for e, y in zip(eta, y_)), sum(e*z for e, z in zip(eta, z_)))
@@ -221,26 +252,16 @@ for i in range(B.nrows):
         if (sum(e*a for e, a in zip(eta, STATE)) != 0 or (
             USE_SUBS and sum(e*a for e, a in zip(eta1, STATE)) != 0
         )):
-            if i >= expect_vectors:
+            if i > expect_vectors:
                 break
             raise ValueError(r"we need `\sum_i \eta_i A_i = 0`")
 
-    if SOL is not None or i < expect_vectors:
-        ETA.append(eta)
-        if USE_SUBS:
-            ETA1.append(eta1)
+    ETA.append(eta)
+    if USE_SUBS:
+        ETA1.append(eta1)
 
-if VERBOSE >= 2:
+if VERBOSE >= 3:
     print()
-
-ETA_m = IntegerMatrix.from_matrix(ETA, int_type='mpz')
-LLL.reduction(ETA_m)
-ETA = [list(b) for b in ETA_m if any(list(b))]
-if USE_SUBS:
-    ETA_m1 = IntegerMatrix.from_matrix(ETA1, int_type='mpz')
-    LLL.reduction(ETA_m1)
-    ETA1 = [list(b) for b in ETA_m1 if any(list(b))]
-
 
 if SOL is not None:
     assert len(ETA) >= expect_vectors, f"rank ETA: {len(ETA)}"
