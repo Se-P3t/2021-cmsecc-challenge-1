@@ -12,7 +12,8 @@ from six.moves import range
 
 def workout(g6k, tracer, kappa, blocksize, dim4free_min=0,              # Main parameters
             dim4free_dec=1, start_n=40, goal_r0=0.,                     # Loop control
-            verbose=False, save_prefix=None, pump_params=None           # Misc
+            verbose=False, save_prefix=None, pump_params=None,          # Misc
+            timeout=None                                                # mod
             ):
     """
     :param g6k: The g6k object to work with
@@ -72,5 +73,10 @@ def workout(g6k, tracer, kappa, blocksize, dim4free_min=0,              # Main p
                 fn = open("%s_%d_%d.mat" % (save_prefix.rstrip(), g6k.M.d - f, g6k.M.d), "w")
                 fn.write(str(g6k.M.B))
                 fn.close()
+
+            if timeout is not None and time.time() - runtimestart > timeout:
+                if verbose:
+                    print('\ntimeout, break')
+                break
 
     return flast
