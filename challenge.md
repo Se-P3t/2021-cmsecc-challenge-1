@@ -498,3 +498,42 @@ total   1:14.81
     "initial_state": [963105734, 789585151, 1238195227, 2028522939, 1124205863, 1618865668, 452174891, 77673612, 46901163, 1112184517, 2114462053, 259959215, 1976235589, 1517149832, 147549104, 73665604]
 }
 ```
+
+### level 3
+
+```sh
+ % time sage recover_modulus__kernel.sage 31 16 265 70 14 --category 3 --level 3 --verbose 2 --block-size 30 --threads 10 --sieve --timeout 300 --max-dim 80 --check
+SEED: 11316827758390952469
+USE_SUBS: False
+
+find the kernel (rank 195)
+
+Loaded file 'svpchallenge-195.txt'
+gh = 165086.056394, goal_r0/gh = 0.000000, r0/gh = 0.909447
+'threads': 10,       :: n: 195, cputime  0.0090s, walltime:  0.0090s, flast: -1.00, |db|: 2^0.00
+expect_vectors: 5
+
+find the kernel (rank 2)
+
+kernel rank: 2
+
+checking z_i: maybe
+finding modulus
+ 31 bits maybe
+checking c_i: True
+
+================
+CPU     815%
+user    43:59.48
+system  3.875
+total   5:23.99
+```
+
+```json
+{
+    "modulus": 2147385873,
+    "zbits": 14,
+    "coefficients": [1433408125, 1187896517, 1493677871, 674581842, 873135996, 1326711093, 1726922573, 833159114, 897246300, 1821464147, 1671306427, 570111420, 268554940, 1034987293, 1263557877, 894951295],
+    "initial_state": [1976346479, 1550017240, 380413913, 160326487, 379904755, 622685282, 377075770, 1527069890, 946605673, 2096385369, 1160042120, 619378670, 50681874, 1753705306, 1683069046, 1512092243]
+}
+```
