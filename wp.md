@@ -17,9 +17,7 @@ for the details on the results, refer to [challenge.md](./challenge.md)
 
 TODO
 
-
 ### [recover_initial_state__embedding.py](./recover_initial_state__embedding.py)
-
 $$
 a_i = 2^k y_i + z_i \\
 a_{i+j} = \sum_{l=0}^{n-1} q_{j,l} a_{i+l} \bmod m
@@ -48,21 +46,62 @@ $$
 \end{aligned}
 $$
 
-
+bound of $z_i$: $z = 2^k > z_i \geq 0$
 
 scale: $\left(m, m/z, \ldots, m/z, m/z, \ldots, m/z\right)$
 
 dim: $d+1$
 
-$||v||_2 \leq \sqrt{d+1} m $
+norm of target vector: 
 
 $$
-det(L) = \frac{m^{2d-n+1}}{z^{d+1}}
+||v||_2 = \sqrt{m^2 + \sum_{i=0}^{d-1} (z_i \cdot \frac{m}{z})^2} < \sqrt{d+1} m
 $$
 
+determinant of basis matrix:
+
 $$
-||b_1||_2 \leq 2^{d/4} z^{-1} m^{1+\frac{d-n}{d+1}}
+det(L) = \frac{m^{2d-n+1}}{z^d}
 $$
+
+expected $\lambda_1$ according to the Gaussian heuristic:
+
+$$
+gh(L) \approx \sqrt{\frac{dim}{2\pi e}} det(L)^{1/dim} = \sqrt{\frac{d+1}{2\pi e}} z^{-d/(d+1)} m^{1+\frac{d-n}{d+1}}
+$$
+
+norm of the first LLL-reduced ($\delta = 3/4$) vector:
+
+$$
+||b_1||_2 \leq 2^{(dim-1)/4} det(L)^{1/dim} = 2^{d/4} z^{-d/(d+1)} m^{1+\frac{d-n}{d+1}}
+$$
+
+expected norm of the shortest vector found by BKZ-$\beta$:
+
+$$
+||b_1||_2 \approx \delta_\beta^{dim-1} \cdot det(L)^{1/dim},
+$$
+​	where $\delta_\beta = \sqrt{\beta/(2\pi e)}^{1/(\beta-1)}$.
+
+
+
+firstly, the target vector must be the shortest one: $||v||_2 < gh(L)$ or
+$$
+\log_{m} z < \frac{d(d-n)}{(d+1)^2} - \epsilon
+$$
+
+
+
+| zbits (mbits=31) | 25     | 26     | 27     | 28     | 29     |
+| :--------------: | ------ | ------ | ------ | ------ | ------ |
+|       lhs        | 0.8065 | 0.8387 | 0.8710 | 0.9032 | 0.9355 |
+
+|  d   |  100 | 150    | 200    | 300    | 500    |
+| :--: | --- | ------ | ------ | ------ | ------ |
+| rhs  | 0.8234 | 0.8815 | 0.9109 | 0.9404 | 0.9641 |
+
+
+
 
 
 #### result
