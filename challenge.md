@@ -432,7 +432,7 @@ total   10.004
 ```sh
  % time sage recover_modulus__kernel.sage 31 16 140 30 5 --category 3 --level 1 --verbose 1 --block-size 20 --check                                           
 SEED: 10019631545210073147
-USE_SUBS: False
+FLAGS = 01
 
 find the kernel (rank 110)
 
@@ -468,7 +468,7 @@ total   30.772
 ```sh
  % time sage recover_modulus__kernel.sage 31 16 190 40 10 --category 3 --level 2 --verbose 1 --block-size 30 --check            
 SEED: 2732523400034528389
-USE_SUBS: False
+FLAGS = 01
 
 find the kernel (rank 150)
 
@@ -504,7 +504,7 @@ total   1:14.81
 ```sh
  % time sage recover_modulus__kernel.sage 31 16 265 70 14 --category 3 --level 3 --verbose 2 --block-size 30 --threads 10 --sieve --timeout 300 --max-dim 80 --check
 SEED: 11316827758390952469
-USE_SUBS: False
+FLAGS = 01
 
 find the kernel (rank 195)
 

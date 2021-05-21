@@ -7,6 +7,7 @@ import os
 import argparse
 import subprocess
 import IPython
+import itertools
 
 from fpylll import FPLLL, IntegerMatrix, BKZ
 
@@ -63,10 +64,29 @@ n = args.n
 r = args.r
 t = args.t
 zbits = args.zbits
+ybits = mbits - zbits
 
-USE_SUBS = False
-if 2*zbits > mbits + 2: # roughly check
-    USE_SUBS = True
+
+"""
+let z' = z - 2^{zbits-1}, y' = 2y + 1, if
+1) zbits < ybits
+    no substitute
+    DEFAULT
+2) ybits <= zbits < ybits + 2
+    z' < y'
+    USE_SUBS
+3) zbits > ybits + 2
+    y < z, y' < z'
+    DEFAULT | USE_SUBS
+4) zbits == ybits + 2
+    test your luck: we want z' < y'
+    USE_SUBS
+"""
+DEFAULT = 0b01
+USE_SUBS = 0b10
+
+FLAGS = 0
+
 
 if not (r > t > n):
     raise ValueError("r > t > n")
@@ -83,14 +103,26 @@ if not (r > t > n):
 VERBOSE = args.verbose
 THREADS = args.threads
 SEED = args.seed or int.from_bytes(os.urandom(8), 'big')
+if zbits < ybits:
+    FLAGS = DEFAULT
+elif zbits < ybits + 2:
+    FLAGS = USE_SUBS
+elif zbits > ybits + 2:
+    FLAGS = DEFAULT | USE_SUBS
+else:
+    FLAGS = USE_SUBS
+    # TODO: use another subsititude
+    raise DeprecationWarning("zbits == ybits + 2, the solution may not be found")
+
 if VERBOSE >= 1:
     print(f"SEED: {SEED}")
-    print(f"USE_SUBS: {USE_SUBS}")
+    print(f"FLAGS = {FLAGS:02b}")
     print()
 set_random_seed(SEED)
 FPLLL.set_threads(THREADS)
 
 
+N = r + t - 1
 if (args.category is None) or (args.level is None):
     if not args.experiment:
         raise ValueError("Undefined behavior")
@@ -103,7 +135,6 @@ if (args.category is None) or (args.level is None):
         print(f"initial state: {INIT_STATE}")
         print()
     STATE = copy(INIT_STATE)
-    N = r + t - 1
     for j in range(n, N):
         a_j = sum(c_i*a_i for c_i, a_i in zip(COEFFS, STATE[-n:])) % m
         STATE.append(a_j)
@@ -123,20 +154,9 @@ if (args.category is None) or (args.level is None):
 
 else:
     y_ = read_data(args.category, args.level)
-    N = len(y_)
-    if N < r+t-1:
-        raise ValueError(f"outputs is not enough (got {N}, expect >={r+t-1})")
+    if len(y_) < N:
+        raise ValueError(f"outputs is not enough (got {len(y_)}, expect >={N})")
     SOL = None
-
-
-if DEBUG and args.experiment and input('embed? '):
-    tmpfile = f"exp-{SEED}-{mbits}-{n}-{r}-{t}-{zbits}.mat"
-    if os.path.exists(tmpfile):
-        A = IntegerMatrix.from_file(tmpfile)
-        print(f"Loaded tmpfile {tmpfile} :: {A.nrows} x {A.ncols}")
-    IPython.embed()
-    if input("exit? "):
-        exit(int(0))
 
 
 
@@ -176,21 +196,12 @@ def left_kernel_lll(M:list, expect_rank) -> list:
     for i, row in enumerate(B):
         if any(row[:t]):
             if i < expect_rank:
-                # LLL not enough
-                #matrix_overview(B)
                 if VERBOSE >= 1:
                     print(f"got non-zero at row {i}")
                 M = B
                 break
             if VERBOSE >= 1:
                 print(f"find the kernel (rank {expect_rank})\n")
-            if expect_rank != 2:
-                tmpfile = f"eta-{args.category}-{args.level}.mat"
-                if args.experiment:
-                    tmpfile = f"exp-{SEED}-{mbits}-{n}-{r}-{t}-{zbits}.mat"
-                open(tmpfile, "w").write(
-                    f"[{str_mat(M)}]"
-                )
             return M
         M.append(list(row[t:]))
 
@@ -198,30 +209,28 @@ def left_kernel_lll(M:list, expect_rank) -> list:
     raise RuntimeError("cannot find the kernel, expect rank too large")
 
 
-
-M = [[0]*t for _ in range(r)]
-if USE_SUBS:
-    M1 = [[0]*t for _ in range(r)]
-for i in range(r):
-    for j in range(t):
+Ms = []
+if FLAGS & DEFAULT:
+    M = [[0]*t for _ in range(r)]
+    for i, j in itertools.product(range(r), range(t)):
         M[i][j] = y_[i+j]
-        if USE_SUBS:
-            M1[i][j] = (y_[i+j]*2+1)
+    Ms.append(M)
+if FLAGS & USE_SUBS:
+    M = [[0]*t for _ in range(r)]
+    for i, j in itertools.product(range(r), range(t)):
+        M[i][j] = (y_[i+j]*2+1)
+    Ms.append(M)
 
-B = left_kernel_lll(M, r-t)
-if USE_SUBS:
-    B1 = left_kernel_lll(M1, r-t)
+
+Bs = [left_kernel_lll(M, r-t) for M in Ms]
 
 try:
-    B = IntegerMatrix.from_matrix(B)
-    BKZ.reduction(B,BKZ.EasyParam(block_size=args.block_size, flags=bkz_flags))
-    if args.sieve:
-        B = solve_asvp(B, **sieve_param)
-    if USE_SUBS:
-        B1 = IntegerMatrix.from_matrix(M1)
-        BKZ.reduction(B1, BKZ.EasyParam(block_size=args.block_size, flags=bkz_flags))
+    for i, B in enumerate(Bs):
+        B = IntegerMatrix.from_matrix(B)
+        BKZ.reduction(B,BKZ.EasyParam(block_size=args.block_size, flags=bkz_flags))
         if args.sieve:
-            B1 = solve_asvp(B1, **sieve_param)
+            B = solve_asvp(B, **sieve_param)
+        Bs[i] = B
 except KeyboardInterrupt:
     IPython.embed()
     exit(int(-1))
@@ -231,78 +240,80 @@ if VERBOSE >= 1:
     print(f"expect_vectors: {expect_vectors}")
     print()
 
-ETA = []
-if USE_SUBS:
-    ETA1 = []
-for i in range(B.nrows):
-    if SOL is None and i >= expect_vectors:
-        break
-    eta = list(B[i])
-    if USE_SUBS:
-        eta1 = list(B1[i])
+ETAs = []
+if SOL is None:
+    for B in Bs:
+        ETA = []
+        for i in range(expect_vectors):
+            eta = B[i]
+            if VERBOSE >= 3:
+                # when rank is large, this is time-consuming
+                print(i, eta.norm())
+            ETA.append(list(eta))
+        ETAs.append(ETA)
+else: # experiment
+    for idx, B in enumerate(Bs):
+        ETA = []
+        for i, eta in enumerate(B):
+            if VERBOSE >= 3 and idx == 0: # only check the first
+                if FLAGS & DEFAULT:
+                    print(
+                        i,
+                        eta.norm(),
+                        #sum(e*a for e, a in zip(eta, STATE)),
+                        #sum(e*y for e, y in zip(eta, y_)),
+                        sum(e*z for e, z in zip(eta, z_)),
+                    )
+                else:
+                    print(
+                        i,
+                        eta.norm(),
+                        #sum(e*a for e, a in zip(eta, STATE)),
+                        #sum(e*(2*y+1) for e, y in zip(eta, y_)),
+                        sum(e*(z-2**(zbits-1)) for e, z in zip(eta, z_)),
+                    )
 
-    if VERBOSE >= 3:
-        if SOL is not None:
-            print(i, sum(e*e for e in eta)//r, sum(e*a for e, a in zip(eta, STATE)),
-                  sum(e*y for e, y in zip(eta, y_)), sum(e*z for e, z in zip(eta, z_)))
-        else:
-            print(i, sum(e*e for e in eta)//r)
+            if sum(e*a for e, a in zip(eta, STATE)) != 0:
+                if i > expect_vectors:
+                    break
+                raise ValueError(r"we need `\sum_i \eta_i A_i = 0`")
 
-    if SOL is not None:
-        if (sum(e*a for e, a in zip(eta, STATE)) != 0 or (
-            USE_SUBS and sum(e*a for e, a in zip(eta1, STATE)) != 0
-        )):
-            if i > expect_vectors:
-                break
-            raise ValueError(r"we need `\sum_i \eta_i A_i = 0`")
-
-    ETA.append(eta)
-    if USE_SUBS:
-        ETA1.append(eta1)
+            ETA.append(list(eta))
+        ETAs.append(ETA)
 
 if VERBOSE >= 3:
     print()
 
 if SOL is not None:
-    assert len(ETA) >= expect_vectors, f"rank ETA: {len(ETA)}"
-    if USE_SUBS:
-        assert len(ETA1) >= expect_vectors, f"rank ETA': {len(ETA1)}"
+    for ETA in ETAs:
+        if len(ETA) < expect_vectors:
+            raise RuntimeError(f"rank ETA: {len(ETA)}")
 
 
-M = [[0]*t*expect_vectors for _ in range(r+t-1)]
-if USE_SUBS:
-    M1 = [[0]*t*expect_vectors for _ in range(r+t-1)]
-for j in range(t):
-    for i in range(r):
-        for a in range(expect_vectors):
-            M[j+i][expect_vectors*j+a] = ETA[a][i]
-            if USE_SUBS:
-                M1[j+i][expect_vectors*j+a] = ETA1[a][i]
-B = left_kernel_lll(M, 2)
-B = Matrix(ZZ, B).LLL()
-if USE_SUBS:
-    B1 = left_kernel_lll(M1, 2)
-    B1 = Matrix(ZZ, B1).LLL()
+Ms = []
+for ETA in ETAs:
+    M = [[0]*t*expect_vectors for _ in range(r+t-1)]
+    for j, i, a in itertools.product(range(t), range(r),
+        range(expect_vectors)):
+        M[j+i][expect_vectors*j+a] = ETA[a][i]
+    Ms.append(M)
 
-nrows = B.nrows()
-if USE_SUBS:
-    nrows1 = B1.nrows()
-if VERBOSE >= 1:
-    print(f"kernel rank: {nrows}")
-    if USE_SUBS:
-        print(f"kernel' rank: {nrows1}")
-    print()
+Bs = [Matrix(ZZ, left_kernel_lll(M, 2)).LLL() for M in Ms]
 
-if DEBUG and input('embed? '):
-    IPython.embed()
-    if input("exit? "):
-        exit(int(0))
+for B in Bs:
+    nrows = B.nrows()
+    if VERBOSE >= 1:
+        print(f"kernel rank: {nrows}")
+    if nrows != 2:
+        print(r"some `\eta` are wrong")
+        if DEBUG and input('embed? '):
+            IPython.embed()
+            exit(int(-1))
+print()
 
-assert nrows == 2, r"some `\eta` are wrong"
-if USE_SUBS:
-    assert nrows1 == 2, r"some `\eta` are wrong"
-
-if USE_SUBS:
+B = Bs[0]
+if FLAGS == DEFAULT | USE_SUBS:
+    B1 = Bs[1]
     for code in range(1 << 3):
         M = Matrix(ZZ, [
             list(B[0] if B[0,0] > 0 else -B[0]), # y
@@ -336,53 +347,68 @@ if USE_SUBS:
         if DEBUG and input('embed? '):
             IPython.embed()
         exit(int(-1))
-else:
+    bs = [tuple(b)]
+elif FLAGS == DEFAULT:
     b = B[0]
     if b[0] < 0:
         b *= -1
+    bs = [tuple(b)]
+elif FLAGS == USE_SUBS:
+    bs = [
+        tuple(2**(zbits-1)+z_i for z_i in B[0]),
+        tuple(2**(zbits-1)-z_i for z_i in B[0]),
+    ]
 print("checking z_i:", end=' ')
 if SOL is not None:
-    res = (tuple(z_) == tuple(b))
+    res = (tuple(z_) in bs)
     print(res)
     if not res:
         if DEBUG and input('embed? '):
             IPython.embed()
         exit(int(-1))
 else:
+    b = bs[0]
     if min(b) >= 0 and max(b) < 2**zbits:
         print("maybe")
     else:
         print(f"False :: range {min(b)}, {max(b)}")
         exit(int(-1))
-         
 
-a_ = [int(2**zbits*y + z) for y, z in zip(y_, b)]
+as_ = [
+    [int(2**zbits*y + z) for y, z in zip(y_, b)]
+    for b in bs
+]
+
+#IPython.embed(); exit(int(0))
 
 print("finding modulus")
 km = 0
-for offset in range(N-2*n+2):
-    A0 = Matrix(ZZ, n)
-    A1 = Matrix(ZZ, n)
-    A2 = Matrix(ZZ, n)
-    for i in range(n):
-        for j in range(n):
-            A0[i, j] = a_[offset+i+j]
-            A1[i, j] = a_[offset+i+j+1]
-            A2[i, j] = a_[offset+i+j+2]
-    tmp = (A1 * A0.inverse() * A1)[n-1, n-1]
-    km = gcd(km, tmp.numerator() - A2[n-1, n-1]*tmp.denominator())
-    bits = int(km).bit_length()
-    print(f"\r{bits:3d} bits", end=' ')
+for a_ in as_:
+    for offset in range(N-2*n):
+        A0 = Matrix(ZZ, n)
+        A1 = Matrix(ZZ, n)
+        A2 = Matrix(ZZ, n)
+        for i in range(n):
+            for j in range(n):
+                A0[i, j] = a_[offset+i+j]
+                A1[i, j] = a_[offset+i+j+1]
+                A2[i, j] = a_[offset+i+j+2]
+        tmp = (A1 * A0.inverse() * A1)[n-1, n-1]
+        km = gcd(km, tmp.numerator() - A2[n-1, n-1]*tmp.denominator())
+        bits = int(km).bit_length()
+        print(f"\r{bits:3d} bits", end=' ')
+        if bits == mbits:
+            if SOL is None:
+                print("maybe")
+            else:
+                res = (km == m)
+                print(res)
+                if not res:
+                    if DEBUG and input('embed? '):
+                        IPython.embed()
+                    exit(int(-1))
+            break
     if bits == mbits:
-        if SOL is None:
-            print("maybe")
-        else:
-            res = (km == m)
-            print(res)
-            if not res:
-                if DEBUG and input('embed? '):
-                    IPython.embed()
-                exit(int(-1))
         break
 else:
     print("\rcannot find modulus")
