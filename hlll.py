@@ -45,7 +45,7 @@ def hlll_wrapper(A, threads=4, threshold=40, **kwds):
 
     try:
         subprocess.check_call(command, shell=True)
-        A = IntegerMatrix.from_file(tmpfile)
+        A = IntegerMatrix.from_file(tmpfile, int_type=A.int_type)
     finally:
         os.remove(tmpfile)
 
