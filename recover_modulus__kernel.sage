@@ -178,12 +178,13 @@ sieve_param = {
     'pump/down_sieve': True,
 }
 
-def left_kernel_lll(M:list, expect_rank) -> list:
+def left_kernel_lll(M:list, expect_rank:int, KK:int = 0) -> list:
     r = len(M)
     t = len(M[0])
-    MM = max(M[0])
-    BB = ceil((2*MM*r)**(t/(r-t)))
-    KK = ceil(sqrt(r)*2**((r-1)/2) * BB)
+    if KK == 0:
+        MM = max(M[0])
+        BB = ceil((2*MM*r)**(t/(r-t)))
+        KK = ceil(sqrt(r)*2**((r-1)/2) * BB)
 
     M = block_matrix(ZZ,
         [[Matrix(ZZ, M)*KK, identity_matrix(r)]]
@@ -222,7 +223,8 @@ if FLAGS & USE_SUBS:
     Ms.append(M)
 
 
-Bs = [left_kernel_lll(M, r-t) for M in Ms]
+KK = randint(1000<<mbits, 2000<<mbits)
+Bs = [left_kernel_lll(M, r-t, KK) for M in Ms]
 
 try:
     for i, B in enumerate(Bs):
