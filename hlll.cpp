@@ -17,8 +17,7 @@ int main(int argc, char *argv[])
         //("seysen", "use Seysen reduction", cxxopts::value<bool>()
         //  ->implicit_value("true")->default_value("false"))
 
-        //("precision", "bit precision to use",
-        //  cxxopts::value<unsigned int>()->default_value("53"))
+        ("precision", "bit precision to use", cxxopts::value<unsigned int>())
 
         ("delta", "LLL: delta", cxxopts::value<double>()
           ->default_value("0.999"))
@@ -37,8 +36,8 @@ int main(int argc, char *argv[])
     auto args = options.parse(argc, argv);
 
     if (args.count("help")) {
-      std::cout << options.help() << std::endl;
-      exit(0);
+        std::cout << options.help() << std::endl;
+        exit(0);
     }
     bool verbose = args["verbose"].as<bool>();
     std::string input_file = args["matrix"].as<std::string>();
@@ -49,7 +48,11 @@ int main(int argc, char *argv[])
     int threads = args["threads"].as<int>();
     //bool seysen = args["seysen"].as<bool>();
 
-    //unsigned int precision = args["precision"].as<unsigned int>();
+    unsigned int precision;
+    if (args.count("precision")) {
+        precision = args["precision"].as<unsigned int>();
+        mpfr_set_default_prec(precision);
+    }
 
     double delta = args["delta"].as<double>();
     int threshold = args["threshold"].as<int>();
@@ -61,8 +64,7 @@ int main(int argc, char *argv[])
 
     typedef mpz_t integer_t;
     typedef matrix<Z_NR<integer_t> > MatrixZT;
-    typedef matrix<FP_NR<dpe_t> > MatrixFT;
-    //typedef MatrixPE<double, dpe_t> MatrixFT;
+    typedef matrix<FP_NR<mpfr_t> > MatrixFT;
 
     ZZ_mat<integer_t> A;
     ZZ_mat<integer_t> AT;
@@ -80,11 +82,10 @@ int main(int argc, char *argv[])
 
     AT.resize(A.get_cols(), A.get_rows());
     transpose(AT, A);
-    Lattice<integer_t, dpe_t, MatrixZT, MatrixFT> B(AT, NO_TRANSFORM,
-      DEF_REDUCTION);
-    //  seysen ? SEYSEN_REDUCTION : DEF_REDUCTION);
+    Lattice<integer_t, mpfr_t, MatrixZT, MatrixFT> B(AT, NO_TRANSFORM,
+        DEF_REDUCTION);
+    //    seysen ? SEYSEN_REDUCTION : DEF_REDUCTION);
     B.set_num_S(threads, threshold);
-    //B.setprec(precision);
 
     B.hlll(delta, verbose);
     transpose(A, B.getbase());
