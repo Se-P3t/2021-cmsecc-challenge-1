@@ -7,7 +7,9 @@ from functools import lru_cache
 
 import mpmath
 from sympy.matrices import zeros, eye
-from fpylll import IntegerMatrix, GSO
+from fpylll import IntegerMatrix, LLL, BKZ
+
+from hlll import hlll_wrapper
 
 
 class MRG:
@@ -185,7 +187,7 @@ class MRGSolver:
         self.outputs = tuple(outputs)
         self.length = len(outputs)
         self.threads = threads
-        self.M = None
+        self.L = None
 
     def gen_lattice(self, d):
         """
@@ -196,7 +198,7 @@ class MRGSolver:
             ValueError: outputs not enough
 
         Returns:
-            MatGSO:
+            IntegerMatrix:
         """
         if d > self.length:
             raise ValueError(f"outputs is not enough (got {self.length}, expect >={d})")
@@ -226,15 +228,50 @@ class MRGSolver:
             for i in range(self.mrg.degree):
                 A[i+1, col] = int(Q_[idx][i]) * scale
 
-        M = GSO.Mat(
-            A,
-            U=IntegerMatrix.identity(A.nrows, int_type=A.int_type),
-            UinvT=IntegerMatrix.identity(A.nrows, int_type=A.int_type),
-            float_type="mpfr",
-            flags=GSO.DEFAULT,
-        )
-        _ = M.update_gso()
-        return M
+        return A
+
+    def have_construct_lattice(self):
+        if self.L is None:
+            raise ValueError("lattice not construct, call `gen_lattice` first")
+
+    def run_lll(self):
+        """
+        run LLL over lattice
+        """
+        self.have_construct_lattice()
+
+        LLL.reduction(self.L)
+
+    def run_hlll(self, threads=4, threshold=40, **kwds):
+        """
+        run hLLL over lattice
+
+        Args:
+            threads (int, optional): Defaults to 4.
+            threshold (int, optional): Defaults to 40.
+            precision (int, optional):
+            keeptmp (bool, optional): Defaults to False.
+        """
+        self.have_construct_lattice()
+
+        self.L = hlll_wrapper(self.L, threads=threads, threshold=threshold, **kwds)
+
+    def run_bkz(self, block_size=20, verbose=False):
+        """
+        run BKZ over lattice
+
+        Args:
+            block_size (int, optional): Defaults to 20.
+            verbose (bool, optional): Defaults to False.
+        """
+        self.have_construct_lattice()
+
+        bkz_flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
+        if verbose:
+            bkz_flags |= BKZ.VERBOSE
+        par = BKZ.EasyParam(block_size=block_size, flags=bkz_flags)
+
+        BKZ.reduction(self.L, par)
 
     def check_init(self, init):
         """
