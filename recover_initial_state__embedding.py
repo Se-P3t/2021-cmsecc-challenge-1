@@ -3,13 +3,12 @@
 recover initial state
 """
 import os
-import argparse
-import IPython
+import sys
 import random
-from copy import copy
+import argparse
 
-from sympy.matrices import Matrix, zeros, eye
-from fpylll import FPLLL, IntegerMatrix, BKZ
+import IPython
+from fpylll import FPLLL
 
 from util import read_data, save_solution, matrix_overview
 from mrg import MRG, MRGSolver
@@ -141,9 +140,9 @@ if init is not None:
             'initial_state': init,
         }
         save_solution(args.category, args.level, solution)
-    exit(0)
+    sys.exit(0)
 elif not SIEVE:
-    exit(-1) # cannot find solution after BKZ
+    sys.exit(-1) # cannot find solution after BKZ
 
 
 solver.L = solve_asvp(solver.L, **sieve_param)
@@ -169,4 +168,4 @@ if init is not None:
         }
         save_solution(args.category, args.level, solution)
 else:
-    exit(-2) # cannot find solution after SIEVE
+    sys.exit(-2) # cannot find solution after SIEVE
