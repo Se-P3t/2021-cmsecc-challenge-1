@@ -174,19 +174,17 @@ class MRGSolver:
     Solve MRG with truncated outputs
     """
 
-    def __init__(self, mrg, zbits, outputs, threads=1):
+    def __init__(self, mrg, zbits, outputs):
         """
         Args:
             mrg (`MRG`): a MRG object
             zbits (int): truncated bits
             outputs (list-like): truncated outputs
-            threads (int, optional): Defaults to 1.
         """
         self.mrg = mrg
         self.zbits = zbits
         self.outputs = tuple(outputs)
         self.length = len(outputs)
-        self.threads = threads
         self.L = None
 
     def gen_lattice(self, d):
