@@ -194,9 +194,6 @@ class MRGSolver:
 
         Raises:
             ValueError: outputs not enough
-
-        Returns:
-            IntegerMatrix:
         """
         if d > self.length:
             raise ValueError(f"outputs is not enough (got {self.length}, expect >={d})")
@@ -218,19 +215,58 @@ class MRGSolver:
         for j in range(d - self.mrg.degree):
             idx = indices[j]
             col = j + self.mrg.degree + 1
+
             c_j = 2**self.zbits * (y_[idx] - sum(
                 int(Q_[idx][l])*y_[l] for l in range(self.mrg.degree)
             )) % self.mrg.modulus
+
             A[col, col] = self.mrg.modulus * scale
             A[0, col] = (c_j + 2**(self.zbits-1)) * scale
+
             for i in range(self.mrg.degree):
                 A[i+1, col] = int(Q_[idx][i]) * scale
 
-        return A
+        self.L = A
 
     def have_construct_lattice(self):
+        """
+        check if lattice is built
+
+        Raises:
+            ValueError: lattice not construct
+        """
         if self.L is None:
             raise ValueError("lattice not construct, call `gen_lattice` first")
+
+    def randomize_block(self, min_row=0, max_row=None, density=0):
+        """
+        Randomize basis between from ``min_row`` and ``max_row`` (exclusive)
+
+        Args:
+            min_row (int, optional): start in this row. Defaults to 0.
+            max_row (int, optional): stop at this row (exclusive). Defaults to None.
+            density (int, optional): number of non-zero coefficients in lower triangular
+                transformation matrix. Defaults to 0.
+        """
+        self.have_construct_lattice()
+
+        if max_row is None:
+            max_row = self.L.nrows
+
+        # 1. permute rows
+        niter = 4 * (max_row-min_row)  # some guestimate
+        for _ in range(niter):
+            b = a = random.randint(min_row, max_row-1)
+            while b == a:
+                b = random.randint(min_row, max_row-1)
+            self.L.swap_rows(a, b)
+
+        # 2. triangular transformation matrix with coefficients in -1,0,1
+        for a in range(min_row, max_row-2):
+            for _ in range(density):
+                b = random.randint(a+1, max_row-1)
+                s = random.randint(0, 1)
+                self.L[a].addmul(self.L[b], x=2*s-1)
 
     def run_lll(self):
         """
