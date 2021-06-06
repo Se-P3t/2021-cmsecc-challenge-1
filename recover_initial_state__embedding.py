@@ -12,6 +12,7 @@ from sympy.matrices import Matrix, zeros, eye
 from fpylll import FPLLL, IntegerMatrix, BKZ
 
 from util import read_data, save_solution, matrix_overview
+from mrg import MRG, MRGSolver
 from sieve_asvp import solve_asvp
 
 
@@ -59,28 +60,22 @@ coeffs = list(map(int, args.coeffs.replace(' ', '').split(',')))
 n = len(coeffs)
 
 """ verbose level
-0: print warnning when no solution was found
-1: basic param
+0: None
+1: basic param & solution
 2: verbose when sieving
 3: matrix_overview of reduced basis
 4: matrix_overview of input basis
 5: verbose when BKZ
-10: 
-100: 
 """
 VERBOSE = args.verbose
 THREADS = args.threads
 SIEVE = args.sieve
 SEED = args.seed or int.from_bytes(os.urandom(8), 'big')
-random.seed(SEED)
 if VERBOSE >= 1:
     print(f"SEED: {SEED}\n")
 
+random.seed(SEED)
 FPLLL.set_threads(THREADS)
-
-bkz_flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
-if VERBOSE >= 5:
-    bkz_flags |= BKZ.VERBOSE
 
 sieve_param = {
     'threads': THREADS,
@@ -98,150 +93,52 @@ sieve_param = {
 if (args.category is None) or (args.level is None):
     if not args.experiment:
         raise ValueError("Undefined behavior")
-    INIT_STATE = [random.randint(0, m-1) for _ in range(n)]
+
+    mrg = MRG.random(m, 16)
     if VERBOSE >= 1:
-        print(f"initial state: {INIT_STATE}")
+        print(f"initial state: {mrg.initial_state}")
         print()
-    STATE = copy(INIT_STATE)
-    for j in range(n, d):
-        a_j = sum(c_i*a_i for c_i, a_i in zip(coeffs, STATE[-n:])) % m
-        STATE.append(a_j)
-    y_ = [a_i >> zbits for a_i in STATE]
-    z_ = [a_i % 2**zbits for a_i in STATE]
-    SOL = tuple(INIT_STATE)
+
+    y_, z_ = mrg.output(d, zbits, return_z=True)
 else:
     y_ = read_data(args.category, args.level)
     if len(y_) < d:
         raise ValueError(f"outputs is not enough (got {len(y_)}, expect >={d})")
+
     ybits = max(y_).bit_length()
     if ybits != mbits - zbits:
         raise ValueError(f"bit length of `y_i` is wrong (got {ybits}, expect {mbits-zbits})")
-    SOL = None
 
-Q = zeros(n)
-for i in range(n):
-    Q[i, n-1] = coeffs[i]
-    if i == 0:
-        continue
-    Q[i, i-1] = 1
+    mrg = MRG(m, coeffs)
 
-def mat_pow_mod(A, e, m):
-    B = eye(A.shape[0])
-    while e:
-        if e & 1:
-            B *= A
-            B %= m
-        A *= A
-        A %= m
-        e >>= 1
-    return B
-
-Qn = mat_pow_mod(Q, n, m)
-
-Q_ = [None] * n
-Qj = Qn
-for j in range(n, d):
-    Q_.extend(Qj[:, 0].transpose().tolist())
-    Qj *= Q
-    Qj %= m
-
-
-def check(initial_state):
-    if len(initial_state) != n:
-        raise ValueError(f"we only need first {n} internal state to check")
-
-    for a_i, y_i in zip(initial_state, y_):
-        if a_i >> zbits != y_i:
-            return False
-
-    state = copy(initial_state)
-    for y_j in y_[n:]:
-        # this func will check all the outputs,
-        # no need to run `check.py`
-        a_j = sum(a_i*c_i for a_i, c_i in zip(state[-n:], coeffs)) % m
-        if a_j >> zbits != y_j:
-            return False
-        state.append(a_j)
-
-    return True
-
-
-def find_solution(B):
-    nrows = B.nrows
-
-    for idx, b in enumerate(B):
-        b = list(b)
-        if abs(b[0]) != bias*scale:
-            if DEBUG:
-                print(f"row {idx}:: b[0] != bias")
-            continue
-        if b[0] == bias*scale:
-            b = [-bi for bi in b]
-
-        z_ = list(int(bi/scale) + 2**(zbits-1) for bi in b[1:n+1])
-        if max(z_) >= 2**zbits:
-            if DEBUG:
-                print(f"row {idx}:: b[i] too big")
-            continue
-
-        a_ = list(2**zbits*yi + zi for yi, zi in zip(y_, z_))
-
-        if SOL is None:
-            res = check(a_)
-        else:
-            res = tuple(a_) == SOL
-        if VERBOSE >= 1:
-            print(f"row {idx+1}/{nrows}:: {res}")
-        if res:
-            if VERBOSE >= 1:
-                print(f"\nsolution: {a_}")
-            return a_
-
-    print("not found\n")
-    return None
-
-
-scale = m >> (zbits-1)
-bias = 1 << (zbits-1)
-
-M = [[0]*(d+1) for _ in range(d+1)]
-for j in range(d+1):
-    if j < 1:
-        M[j][j] = bias * scale
-    elif j < n+1:
-        M[0][j] = bias * scale
-        M[j][j] = 1 * scale
-    elif j < d+1:
-        c_j = 2**zbits * (y_[j-1] - sum(int(Q_[j-1][l])*y_[l] for l in range(n)))
-        c_j %= m
-        M[j][j] = m * scale
-        M[0][j] = (c_j + 2**(zbits-1)) * scale
-        for i in range(n):
-            M[i+1][j] = int(Q_[j-1][i]) * scale
-
+solver = MRGSolver(mrg, zbits, y_)
+solver.gen_lattice(d)
 if DEBUG or VERBOSE >= 4:
-    matrix_overview(M)
+    matrix_overview(solver.L)
 
-random.shuffle(M)
+solver.randomize_block(density=d // 2)
 
 
-B = IntegerMatrix.from_matrix(M)
-BKZ.reduction(B, BKZ.EasyParam(block_size=args.block_size, flags=bkz_flags))
-
-if VERBOSE >= 3:
-    matrix_overview(B)
+solver.run_bkz(args.block_size, verbose=VERBOSE >= 5)
+if DEBUG or VERBOSE >= 3:
+    matrix_overview(solver.L)
 
 if DEBUG and input('embed? '):
     IPython.embed()
 
-a_ = find_solution(B)
-if a_ is not None:
-    if SOL is None:
+for idx, row in enumerate(solver.L):
+    init = solver.recover_init(list(row))
+    if init is not None:
+        if VERBOSE >= 1:
+            print(f"solution: {init}")
+        break
+if init is not None:
+    if mrg.initial_state is None:
         solution = {
             'modulus': m,
             'zbits': zbits,
             'coefficients': coeffs,
-            'initial_state': a_,
+            'initial_state': init,
         }
         save_solution(args.category, args.level, solution)
     exit(0)
@@ -249,22 +146,26 @@ elif not SIEVE:
     exit(-1) # cannot find solution after BKZ
 
 
-B = solve_asvp(B, **sieve_param)
-
+solver.L = solve_asvp(solver.L, **sieve_param)
 if DEBUG or VERBOSE >= 3:
-    matrix_overview(B)
+    matrix_overview(solver.L)
 
 if DEBUG and input('embed? '):
     IPython.embed()
 
-a_ = find_solution(B)
-if a_ is not None:
-    if SOL is None:
+for idx, row in enumerate(solver.L):
+    init = solver.recover_init(list(row))
+    if init is not None:
+        if VERBOSE >= 1:
+            print(f"solution: {init}")
+        break
+if init is not None:
+    if mrg.initial_state is None:
         solution = {
             'modulus': m,
             'zbits': zbits,
             'coefficients': coeffs,
-            'initial_state': a_,
+            'initial_state': init,
         }
         save_solution(args.category, args.level, solution)
 else:
