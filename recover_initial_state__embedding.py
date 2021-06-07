@@ -12,7 +12,6 @@ from fpylll import FPLLL
 
 from util import read_data, save_solution, matrix_overview
 from mrg import MRG, MRGSolver
-from sieve_asvp import solve_asvp
 
 
 parser = argparse.ArgumentParser(description=__doc__,
@@ -99,6 +98,7 @@ if (args.category is None) or (args.level is None):
         print()
 
     y_, z_ = mrg.output(d, zbits, return_z=True)
+
 else:
     y_ = read_data(args.category, args.level)
     if len(y_) < d:
@@ -115,10 +115,10 @@ solver.gen_lattice(d)
 if DEBUG or VERBOSE >= 4:
     matrix_overview(solver.L)
 
-solver.randomize_block(density=d // 2)
+solver.L.randomize_block()
 
 
-solver.run_bkz(args.block_size, verbose=VERBOSE >= 5)
+solver.L.run_bkz(args.block_size, verbose=VERBOSE >= 5)
 if DEBUG or VERBOSE >= 3:
     matrix_overview(solver.L)
 
@@ -145,7 +145,7 @@ elif not SIEVE:
     sys.exit(-1) # cannot find solution after BKZ
 
 
-solver.L = solve_asvp(solver.L, **sieve_param)
+solver.L.solve_asvp(**sieve_param)
 if DEBUG or VERBOSE >= 3:
     matrix_overview(solver.L)
 

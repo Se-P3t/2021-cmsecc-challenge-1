@@ -7,8 +7,8 @@ from functools import lru_cache
 
 import mpmath
 from sympy.matrices import zeros, eye
-from fpylll import IntegerMatrix, LLL, BKZ
 
+from lattice import Lattice
 from hlll import hlll_wrapper
 
 
@@ -88,15 +88,15 @@ class MRG:
     @staticmethod
     def mat_pow_mod(A, e, m):
         """
-        compute `A^e % m` for a given IntegerMatrix
+        compute `A^e % m` for a given `sympy.matrices.Matrix` object
 
         Args:
-            A (IntegerMatrix): an IntegerMatrix
+            A (sympy.matrices.Matrix): base
             e (int): power
             m (int): modulus
 
         Returns:
-            IntegerMatrix:
+            sympy.matrices.Matrix:
         """
         #assert A.nrows == A.ncols
         B = eye(A.shape[0])
@@ -205,7 +205,7 @@ class MRGSolver:
 
         indices = random.sample(range(self.mrg.degree, self.length), d - self.mrg.degree)
 
-        A = IntegerMatrix(d + 1, d + 1, int_type="mpz")
+        A = Lattice(d + 1, d + 1, int_type="mpz")
 
         A[0, 0] = size * scale
         for j in range(self.mrg.degree):
@@ -228,84 +228,16 @@ class MRGSolver:
 
         self.L = A
 
-    def have_construct_lattice(self):
-        """
-        check if lattice is built
-
-        Raises:
-            ValueError: lattice not construct
-        """
-        if self.L is None:
-            raise ValueError("lattice not construct, call `gen_lattice` first")
-
-    def randomize_block(self, min_row=0, max_row=None, density=0):
-        """
-        Randomize basis between from ``min_row`` and ``max_row`` (exclusive)
-
-        Args:
-            min_row (int, optional): start in this row. Defaults to 0.
-            max_row (int, optional): stop at this row (exclusive). Defaults to None.
-            density (int, optional): number of non-zero coefficients in lower triangular
-                transformation matrix. Defaults to 0.
-        """
-        self.have_construct_lattice()
-
-        if max_row is None:
-            max_row = self.L.nrows
-
-        # 1. permute rows
-        niter = 4 * (max_row-min_row)  # some guestimate
-        for _ in range(niter):
-            b = a = random.randint(min_row, max_row-1)
-            while b == a:
-                b = random.randint(min_row, max_row-1)
-            self.L.swap_rows(a, b)
-
-        # 2. triangular transformation matrix with coefficients in -1,0,1
-        for a in range(min_row, max_row-2):
-            for _ in range(density):
-                b = random.randint(a+1, max_row-1)
-                s = random.randint(0, 1)
-                self.L[a].addmul(self.L[b], x=2*s-1)
-
-    def run_lll(self):
-        """
-        run LLL over lattice
-        """
-        self.have_construct_lattice()
-
-        LLL.reduction(self.L)
-
     def run_hlll(self, threads=4, threshold=40, **kwds):
         """
-        run hLLL over lattice
-
         Args:
             threads (int, optional): Defaults to 4.
             threshold (int, optional): Defaults to 40.
             precision (int, optional):
             keeptmp (bool, optional): Defaults to False.
         """
-        self.have_construct_lattice()
-
-        self.L = hlll_wrapper(self.L, threads=threads, threshold=threshold, **kwds)
-
-    def run_bkz(self, block_size=20, verbose=False):
-        """
-        run BKZ over lattice
-
-        Args:
-            block_size (int, optional): Defaults to 20.
-            verbose (bool, optional): Defaults to False.
-        """
-        self.have_construct_lattice()
-
-        bkz_flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
-        if verbose:
-            bkz_flags |= BKZ.VERBOSE
-        par = BKZ.EasyParam(block_size=block_size, flags=bkz_flags)
-
-        BKZ.reduction(self.L, par)
+        B = hlll_wrapper(self.L, threads=threads, threshold=threshold, **kwds)
+        self.L.set_matrix(B)
 
     def check_init(self, init):
         """
