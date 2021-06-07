@@ -12,7 +12,7 @@ class Lattice(IntegerMatrix):
     IntegerMatrix with some reduction algorithms
     """
 
-    def randomize_block(self, min_row=0, max_row=None, density=0):
+    def randomize_block(self, min_row=0, max_row=None, density=None):
         """
         Randomize basis between from ``min_row`` and ``max_row`` (exclusive)
 
@@ -20,10 +20,12 @@ class Lattice(IntegerMatrix):
             min_row (int, optional): start in this row. Defaults to 0.
             max_row (int, optional): stop at this row (exclusive). Defaults to None.
             density (int, optional): number of non-zero coefficients in lower triangular
-                transformation matrix. Defaults to 0.
+                transformation matrix. Defaults to None.
         """
         if max_row is None:
             max_row = self.nrows
+        if density is None:
+            density = self.nrows // 4
 
         # 1. permute rows
         niter = 4 * (max_row-min_row)  # some guestimate
