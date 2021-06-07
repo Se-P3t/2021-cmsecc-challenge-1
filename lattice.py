@@ -2,8 +2,6 @@
 """
 a Lattice object with reduction algorithms
 """
-from __future__ import absolute_import
-from __future__ import print_function
 import sys
 import time
 import random
@@ -17,9 +15,6 @@ from g6k import SieverParams
 from g6k.utils.cli import pop_prefixed_params
 from g6k.utils.stats import SieveTreeTracer
 from g6k.utils.util import db_stats
-
-import six
-from six.moves import range
 
 
 def workout(g6k, tracer, kappa, blocksize, dim4free_min=0,              # Main parameters
@@ -227,7 +222,7 @@ class Lattice(IntegerMatrix):
             goal_r0__gh=goal_r0__gh,
         )
 
-        for k, v in six.iteritems(kwds):
+        for k, v in kwds.items():
             params[k] = v
         if dry_run:
             print(params)
