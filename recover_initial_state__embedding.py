@@ -42,8 +42,6 @@ parser.add_argument('--block-size', type=int, dest="block_size", default=20,
 # args for sieving
 parser.add_argument('--workout/dim4free-dec', type=int, dest="workout__dim4free_dec", default=3,
                     help="By how much do we decreaseee dim4free at each iteration")
-parser.add_argument('--goal-r0/gh', type=float, dest="goal_r0__gh", default=1.05,
-                    help="Quit when this is reached")
 
 args, _ = parser.parse_known_args()
 
@@ -80,7 +78,6 @@ sieve_param = {
     'verbose': (DEBUG or VERBOSE >= 2),
     'seed': SEED,
     #'dry_run': True,
-    'goal_r0__gh': args.goal_r0__gh,
     'workout/dim4free_dec': args.workout__dim4free_dec,
     'workout/save_prefix': f'logs/sieve-{args.category}-{args.level}',
     'workout/start_n': args.block_size+1,
@@ -145,6 +142,17 @@ elif not SIEVE:
     sys.exit(-1) # cannot find solution after BKZ
 
 
+if VERBOSE >= 2:
+    vol = solver.volf(m, n, zbits, d)
+    expected_target = solver.mvf(m, zbits, d)
+    expected_b0 = solver.ghf(vol, d + 1)
+    print(f"E|v|         = {float(expected_target):.1f}")
+    print(f"E|b[0]|      = {float(expected_b0):.1f}")
+    print(f"E|v|/E|b[0]| = {float(expected_target/expected_b0):.3f}")
+    print()
+
+# NOTE: r0 in `workout` is squared
+sieve_param['workout/goal_r0'] = (d + 1) * m ** 2
 solver.L.solve_asvp(**sieve_param)
 if DEBUG or VERBOSE >= 3:
     matrix_overview(solver.L)

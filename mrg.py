@@ -369,7 +369,7 @@ class MRGSolver:
         size = 1 << (zbits - 1)
         scale = m >> (zbits - 1)
 
-        return mpmath.sqrt((size * scale)**2 + d * m ** 2 / 12)
+        return mpmath.sqrt(((size * scale)**2 + d * m ** 2) / 12)
 
     @classmethod
     def mvf(cls, m, zbits, d, prec=53):
@@ -390,4 +390,4 @@ class MRGSolver:
         size = 1 << (zbits - 1)
         scale = m >> (zbits - 1)
 
-        return mpmath.sqrt((size * scale)**2 + d * m ** 2 / 12)
+        return mpmath.sqrt((size * scale)**2 + d * m ** 2)
