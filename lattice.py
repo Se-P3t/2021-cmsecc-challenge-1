@@ -182,7 +182,9 @@ class Lattice(IntegerMatrix):
                     % (gh, goal_r0 / gh, r0 / gh)
                 )
             )
-        if goal_r0__gh * gh > r0:
+        if goal_r0 > r0:
+            if verbose:
+                print("`r0 < goal_r0` right from the start")
             tracer.exit()
             tracer.trace.data["flast"] = -1
             return tracer.trace
