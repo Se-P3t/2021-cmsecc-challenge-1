@@ -1,67 +1,8 @@
 # -*- coding: utf-8 -*-
-import sys
 import re
 import json
-import subprocess
-from random import SystemRandom
-from collections import OrderedDict
 
-from fpylll import IntegerMatrix, LLL, FPLLL, GSO
-from fpylll.algorithms.bkz2 import BKZReduction
-
-RNG = SystemRandom()
-
-
-def asvp_warpper(A, *cmd_args, verbose=False):
-    """
-    wraper of script `svp_challenge.py`
-
-    EXAMPLE::
-
-        >>> from fpylll import IntegerMatrix
-        >>> A = IntegerMatrix.random(80, 'uniform', bits=30)
-        >>> sol = asvp_warpper(A, '--seed 123', '--threads 1', '--dry-run')
-        >>> sol
-        ...
-    """
-    try:
-        dim = A.nrows
-    except:
-        dim = len(A)
-    open('/tmp/asvp-{}.mat'.format(dim), 'w').write(str_mat(A))
-    cmd = 'svp_challenge.py 40 --load-matrix /tmp/asvp-{}.mat '.format(dim) + \
-        ' '.join(cmd_args)
-    if verbose:
-        print(cmd)
-
-    with subprocess.Popen(cmd, shell=True,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as proc, \
-            open('/tmp/asvp-{}.log'.format(dim), 'bw') as logfile:
-        while True:
-            byte = proc.stdout.read(1)
-            if byte:
-                if verbose:
-                    sys.stdout.buffer.write(byte)
-                    sys.stdout.flush()
-                logfile.write(byte)
-                logfile.flush()
-            else:
-                break
-
-    exit_status = proc.returncode
-    if exit_status != 0:
-        raise RuntimeError("exit({})".format(exit_status))
-
-    with open('/tmp/asvp-{}.log'.format(dim), 'r') as logfile:
-        logs = logfile.read()
-        pattern = r'sol\s\d+,\s\(([-,\s\d]+)\)'
-        sol = re.search(pattern, logs).groups()
-        if not sol:
-            return None
-        sol = list(map(int, sol.split(', ')))
-        return sol
-
-
+from fpylll import IntegerMatrix
 
 
 def read_data(category, level):
@@ -80,6 +21,7 @@ def read_data(category, level):
 def save_solution(category, level, data):
     with open(f"solutions/sol-{category}-{level}.json", 'w') as f:
         f.write(json.dumps(data))
+
 
 def load_solution(category, level):
     with open(f"solutions/sol-{category}-{level}.json", 'r') as f:
@@ -132,46 +74,3 @@ def str_mat(m):
             s += '\n'
         return s
     raise TypeError(f"unknown type ({type(m)}) of input")
-
-
-def print_stats(fmt, stats, keys, extractf=None):
-    if extractf is None:
-        extractf = {}
-    for (n, params), stat in stats.items():
-        kv = OrderedDict()
-        for key in keys:
-            if key in extractf:
-                value = extractf[key](n, params, stat)
-            else:
-                value = sum([float(node[key]) for node in stat]) / len(stat)
-            kv[key] = value
-
-        print(fmt.format(name=params, n=n, **kv))
-
-def load_matrix_file(filepath, randomize=False, seed=None, int_type="long", float_type="double"):
-    """
-    Load matrix from file, LLL reduce (and randomize).
-    :param filepath: Load matrix from this file
-    :param randomize: Randomize the basis
-    :param seed: Seed for randomization
-    :returns: lattice basis and BKZ object
-    """
-    A = IntegerMatrix.from_file(filepath)
-    #A = LLL.reduction(A)
-    A = IntegerMatrix.from_matrix(A, int_type=int_type)
-
-    M = GSO.Mat(A, float_type=float_type)
-    bkz = BKZReduction(M)
-
-    if seed is not None:
-        FPLLL.set_random_seed(seed)
-
-    if randomize:
-        bkz.randomize_block(0, A.nrows, density=A.ncols // 4)
-        LLL.reduction(A)
-        M = GSO.Mat(A, float_type=float_type)
-        bkz = BKZReduction(M)
-
-    bkz.lll_obj()  # to initialize bkz.M etc
-
-    return A, bkz
