@@ -138,7 +138,7 @@ while sieving over GPU, a Tesla T4, we can get the results in 2 hours
 
 POC at colab: <https://colab.research.google.com/drive/1MwqKIxTzkqJMMD8vx3MhHY0l-8g976rm?usp=sharing>
 
-log: <https://drive.google.com/file/d/1Y1B7usFfgONYfj78Hnt5POUDI5xMHEXT/view?usp=sharing>
+log: <https://drive.google.com/file/d/1RffrzXly7PzOhaBrUOkM8JUoy2RjNe4D/view?usp=sharing>
 
 ## category 2
 
