@@ -7,10 +7,10 @@ for the details on the results, refer to [challenge.md](./challenge.md)
 ### reading list
 
 - [**The General Sieve Kernel and New Records in Lattice Reduction**](https://eprint.iacr.org/2019/089)
-- [**On Bounded Distance Decoding with Predicate: Breaking the "Lattice Barrier" for the Hidden Number Problem**](https://eprint.iacr.org/2020/1540) https://github.com/malb/bdd-predicate
-- [**Advanced Lattice Sieving on GPUs, with Tensor Cores**](https://eprint.iacr.org/2021/141) https://github.com/WvanWoerden/G6K-GPU-Tensor
+- [**On Bounded Distance Decoding with Predicate: Breaking the "Lattice Barrier" for the Hidden Number Problem**](https://eprint.iacr.org/2020/1540) <https://github.com/malb/bdd-predicate>
+- [**Advanced Lattice Sieving on GPUs, with Tensor Cores**](https://eprint.iacr.org/2021/141) <https://github.com/WvanWoerden/G6K-GPU-Tensor>
 - [**Guessing Bits: Improved Lattice Attacks on (EC)DSA**](https://eprint.iacr.org/2021/455)
-- [**Lattice Enumeration on GPUs for fplll**](https://eprint.iacr.org/2021/430) https://github.com/FeanorTheElf/fplll-CUDA-enumeration
+- [**Lattice Enumeration on GPUs for fplll**](https://eprint.iacr.org/2021/430) <https://github.com/FeanorTheElf/fplll-CUDA-enumeration>
 - [**Dual lattice attacks for closest vector problems (with preprocessing)**](https://eprint.iacr.org/2021/557)
 
 ### [recover_initial_state.py](./recover_initial_state.py)
@@ -18,11 +18,11 @@ for the details on the results, refer to [challenge.md](./challenge.md)
 TODO
 
 ### [recover_initial_state__embedding.py](./recover_initial_state__embedding.py)
+
 $$
 a_i = 2^k y_i + z_i \\
 a_{i+j} = \sum_{l=0}^{n-1} q_{j,l} a_{i+l} \bmod m
 $$
-
 
 $$
 \sum_{l=0}^{n-1} q_{j,l} z_l - z_j \equiv 2^k \left(y_j - \sum_{l=0}^{n-1} q_{j,l} y_l \right) \equiv c_j, (n \leq j < d)
@@ -32,7 +32,7 @@ $$
 \begin{aligned}
 \begin{pmatrix}
 -1 \\ z_0 \\ \vdots \\ z_{n-1} \\ k_n \\ \vdots \\ k_{d-1}
-\end{pmatrix}^T 
+\end{pmatrix}^T
 &\cdot \begin{pmatrix}
 1 & & & &c_n &\cdots &c_{d-1} \\
 &1 & & &q_{n,0} &\cdots &q_{d-1,0} \\
@@ -52,7 +52,7 @@ scale: $\left(m, m/z, \ldots, m/z, m/z, \ldots, m/z\right)$
 
 dim: $d+1$
 
-norm of target vector: 
+norm of target vector:
 
 $$
 ||v||_2 = \sqrt{m^2 + \sum_{i=0}^{d-1} (z_i \cdot \frac{m}{z})^2} < \sqrt{d+1} m
@@ -81,33 +81,23 @@ expected norm of the shortest vector found by BKZ-$\beta$:
 $$
 ||b_1||_2 \approx \delta_\beta^{dim-1} \cdot det(L)^{1/dim},
 $$
-​	where $\delta_\beta = \sqrt{\beta/(2\pi e)}^{1/(\beta-1)}$.
+​where $\delta_\beta = \sqrt{\beta/(2\pi e)}^{1/(\beta-1)}$.
 
+firstly, the target vector must be the shortest one: $||v||_2 < gh(L)$
 
+for category 1, we have
 
-firstly, the target vector must be the shortest one: $||v||_2 < gh(L)$ or
 $$
-\log_{m} z < \frac{d(d-n)}{(d+1)^2} - \epsilon
+d > \frac{498.0471}{29.9529-zbits}
 $$
 
-
-
-| zbits (mbits=31) | 25     | 26     | 27     | 28     | 29     |
-| :--------------: | ------ | ------ | ------ | ------ | ------ |
-|       lhs        | 0.8065 | 0.8387 | 0.8710 | 0.9032 | 0.9355 |
-
-|  d   |  100 | 150    | 200    | 300    | 500    |
-| :--: | --- | ------ | ------ | ------ | ------ |
-| rhs  | 0.8234 | 0.8815 | 0.9109 | 0.9404 | 0.9641 |
-
-
-
-
+| zbits (mbits=31) | 2  | 3  | 14 | 21 | 24 | 25  | 26  | 27  | 28  | 29  |
+| :--------------: | -- | -- | -- | -- | -- | --- | --- | --- | --- | --- |
+| lower bound of d | 18 | 19 | 32 | 56 | 84 | 101 | 126 | 169 | 256 | 523 |
 
 #### result
 
 solve level 1-6 in minutes
-
 
 ## category 2
 
@@ -120,7 +110,6 @@ recover the coefficients with given `ETA`
 in this category, we're given exactly $r+t-1$ $y_i$'s, which is impossible to reach full rank: in the kernel lattice, we can get at most $r-t$ rows with leading zeros, even if they all satisfy $U_i = \sum_i \eta_i A_i = 0$, we still need more to make $L(g_i)^* = L(g_i)$.
 
 Thus this script is not to be used in this category.
-
 
 ### [recover_coefficients__resultant.sage](./recover_coefficients__resultant.sage)
 
@@ -136,7 +125,7 @@ however, the degree increases rapidly, and I could only solve the first two leve
 
 ### [recover_coefficients__kernel.sage](./recover_coefficients__kernel.sage)
 
-after we reduced the kernel lattice, we can get $d$ pairs of $\eta_i$ such that $\sum _i^{r-1} \eta_i Z_{j+i} = 0$ ($0 \leq j < t$)
+after we reduced the kernel lattice, we can get $d$ pairs of $\eta_i$ such that $\sum_i^{r-1} \eta_i Z_{j+i} = 0$ ($0 \leq j < t$)
 
 combine them in one matrix, given that
 $$
@@ -190,9 +179,9 @@ when $|\vec y| \ll |\vec z|$, the reduced basis matrix is likely to be $[\vec y,
 
 similarly, we could get $[2\vec y +1, (\vec z - 2^{zbits-1})+k_2(2\vec y +1)]$ if $|\vec y'| \ll |\vec z'|$
 
-FIND the left kernel of $[\vec y, \vec z +k_1\vec y, \vec z + k_2(2\vec y +1), \vec 1]$ 
+FIND the left kernel of $[\vec y, \vec z +k_1\vec y, \vec z + k_2(2\vec y +1), \vec 1]$
 
-*for the sign of each vector, we simply iterate all possible situations*
+for the sign of each vector, we *simply iterate all possible situations*
 
 moreover, this method cannot be applied to category 1, since $||\vec y||$ is very small ($2$ ~ $3$ bit), if we only use the info. of $y_i$, the parameter $r$, $t$ will become super large
 
@@ -203,7 +192,6 @@ we did not use `m`, can we do better
 #### result
 
 solve all levels of challenges with fewer BKZ calls (1 or 2 times)
-
 
 ## category 3
 
@@ -221,15 +209,12 @@ TODO: compare the performance
 
 the bound for $||\eta||$ is too ambiguous, we need to choose $r$ and $t$ manually
 
-
 $$
 \begin{aligned}
 |u_i| = \sum_{j=0}^{r-1} \eta_j z_{i+j} &= \sum_{j=0}^{r-1} \eta_j (z_{i+j}-2^{zbits-1}) + 2^{zbits-1} \sum_{j=0}^{r-1} \eta_j \\
 &< 2^{zbits-1}(\sqrt{r} ||\vec \eta|| + \sum_{j=0}^{r-1} \eta_j)
 \end{aligned}
 $$
-
-
 
 ### [recover_modulus__kernel.sage](./recover_modulus__kernel.sage)
 
@@ -242,14 +227,6 @@ so we can compute GCD several times and finally get the modulus
 then the rest are the same
 
 # misc
-
-
-
-
-
-
-
-
 
 $Y_i = (y_i, y_{i+1}, \ldots, y_{i+t-1}), i = 0, \ldots, {r-1}, t < r$
 
@@ -287,31 +264,11 @@ if $||U||_2 < \lambda_1(L)$, then $U = \vec{0} = \sum_{i=0}^{r-1} \eta_i A_i$
 
 $||U|| < \sqrt{rt} 2^k ||\vec\eta||$, $\lambda_1(L) \approx \sqrt{\frac{t}{2\pi e}}det(L)^{1/t} = O(m^{1-n/t})$
 
-
-
-
-
-
-
-
-
 we need NEW idea
-
-
 
 $U = 0 \longrightarrow \sum \eta A = 0$
 
 $vector(z_0, \ldots, z_{d-1})$ is left kernel of ${ETA}^T$
-
-
-
-
-
-
-
-
-
-
 
 Let $g_i = \eta_i + \sum_{j=n}^{r-1} \eta_j q_{j,i}$, we can get
 
@@ -329,9 +286,8 @@ $$
 
 Thus $g_i \bmod m = 0$
 
-
 $$
-L(g_i) = 
+L(g_i) =
 \left(\begin{matrix}
 m &0 &0 &\cdots &0 \\
 -q_{n,i} &1 &0 &\cdots &0 \\
@@ -343,21 +299,9 @@ $$
 
 $\vec\eta(i) = (\eta_i, \eta_n, \eta_{n+1}, \ldots, \eta_{r-1}) \in L(g_i)$
 
-
-
-
-
-
-
-
-
-
-
-
-
 $$
 \begin{aligned}
-\left(\begin{matrix} 1 \\ q_{n,i} \\ \vdots \\ q_{r-1,i} \\ -u^{(0)} \\ \vdots \\ -u_{(d-1)} \end{matrix}\right)^T 
+\left(\begin{matrix} 1 \\ q_{n,i} \\ \vdots \\ q_{r-1,i} \\ -u^{(0)} \\ \vdots \\ -u_{(d-1)} \end{matrix}\right)^T
 &\cdot \left(\begin{matrix}
 1 & & & &\eta_i^{(0)} &\cdots &\eta_i^{(d-1)} \\
  &1 & & &\eta_n^{(0)} &\cdots &\eta_n^{(d-1)} \\
@@ -372,12 +316,3 @@ $$
 $$
 
 **failed**: wanted vector too large      (could used as $\eta'$ ? )
-
-
-
-
-
-
-
-
-
