@@ -4,13 +4,16 @@ recover coefficients
     find `z_i` in kernel(ETA)
 """
 import os
+import sys
+import random
 import argparse
+import itertools
 import subprocess
+
 import IPython
 
-from fpylll import FPLLL, IntegerMatrix, BKZ, LLL
-
 from util import read_data, save_solution, matrix_overview
+from lattice import Lattice
 
 
 parser = argparse.ArgumentParser(description=__doc__,
@@ -54,7 +57,7 @@ USE_SUBS = False
 if 2*zbits > mbits + 2: # roughly check
     USE_SUBS = True
 
-if not (r > t > n):
+if not r > t > n:
     raise ValueError("r > t > n")
 
 
@@ -71,6 +74,7 @@ SEED = args.seed or int.from_bytes(os.urandom(8), 'big')
 if VERBOSE >= 1:
     print(f"SEED: {SEED}\n")
 set_random_seed(SEED)
+random.seed(SEED)
 
 
 if (args.category is None) or (args.level is None):
@@ -113,101 +117,104 @@ MM = 1 << (mbits - zbits)
 BB = ceil((2*MM*r)**(t/(r-t)))
 KK = ceil(sqrt(r)*2**((r-1)/2) * BB)
 
-bkz_flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
-if VERBOSE >= 5:
-    bkz_flags |= BKZ.VERBOSE
-
-M = [[0]*(t+r) for _ in range(r)]
-if USE_SUBS:
-    M1 = [[0]*(t+r) for _ in range(r)]
+Ls = []
+L = Lattice(r, t+r)
 for i in range(r):
     for j in range(t):
-        M[i][j] = y_[i+j] *KK
-        if USE_SUBS:
-            M1[i][j] = (y_[i+j]*2+1) *KK
-    M[i][t+i] = 1
-    if USE_SUBS:
-        M1[i][t+i] = 1
-
+        L[i, j] = y_[i+j] *KK
+    L[i, t+i] = 1
+Ls.append(L)
+if USE_SUBS:
+    L1 = Lattice(r, t+r)
+    for i in range(r):
+        for j in range(t):
+            L1[i, j] = (y_[i+j]*2+1) *KK
+        L1[i, t+i] = 1
+    Ls.append(L1)
 
 if DEBUG and VERBOSE >= 3:
-    matrix_overview(M)
+    matrix_overview(L)
 
 
-B = IntegerMatrix.from_matrix(M)
-BKZ.reduction(B, BKZ.EasyParam(block_size=min(B.nrows, args.block_size), flags=bkz_flags))
-if USE_SUBS:
-    B1 = IntegerMatrix.from_matrix(M1)
-    BKZ.reduction(B1, BKZ.EasyParam(block_size=min(B1.nrows, args.block_size), flags=bkz_flags))
+for L in Ls:
+    L.randomize_block()
+    L.run_bkz(block_size=args.block_size, verbose=VERBOSE >= 5)
 if VERBOSE >= 3:
-    matrix_overview(B)
+    matrix_overview(L)
 
 expect_vectors = ceil((r+t-1)/t)#+1
 if VERBOSE >= 1:
     print(f"expect_vectors: {expect_vectors}")
     print()
 
-ETA = []
-if USE_SUBS:
-    ETA1 = []
+ETAs = []
+if SOL is None:
+    for L in Ls:
+        ETA = []
 
-for i in range(B.nrows):
-    b = list(B[i])
-    if USE_SUBS:
-        b1 = list(B1[i])
-    if any(b[:t]) or (USE_SUBS and any(b1[:t])):
-        if i >= expect_vectors:
-            break
-        raise ValueError(r"we need `\sum_i \eta_i Y_i = 0`")
-    eta = list(b[t:])
-    if USE_SUBS:
-        eta1 = list(b1[t:])
+        for i in range(expect_vectors):
+            b = list(L[i])
+            if any(b[:t]):
+                raise ValueError(r"we need `\sum_i \eta_i Y_i = 0`")
 
-    if VERBOSE >= 2:
-        if SOL is not None:
-            print(i, sum(e*e for e in eta)//r, sum(e*a for e, a in zip(eta, STATE)),
-                  sum(e*y for e, y in zip(eta, y_)), sum(e*z for e, z in zip(eta, z_)))
-        else:
-            print(i, sum(e*e for e in eta)//r)
+            eta = list(b[t:])
 
-    if SOL is not None:
-        if (sum(e*a for e, a in zip(eta, STATE)) != 0 or (
-            USE_SUBS and sum(e*a for e, a in zip(eta1, STATE)) != 0
-        )):
-            if i >= expect_vectors:
-                break
-            raise ValueError(r"we need `\sum_i \eta_i A_i = 0`")
+            if VERBOSE >= 2:
+                print(i, sqrt(sum(e*e for e in eta)/r).n())
 
-    if SOL is not None or i < expect_vectors:
-        ETA.append(eta)
-        if USE_SUBS:
-            ETA1.append(eta1)
+            ETA.append(eta)
+
+        ETAs.append(ETA)
+
+else: # experiment
+    for L in Ls:
+        ETA = []
+
+        for i, b in enumerate(L):
+            b = list(b)
+
+            if any(b[:t]):
+                if i >= expect_vectors:
+                    break
+                raise ValueError(r"we need `\sum_i \eta_i Y_i = 0`")
+
+            eta = list(b[t:])
+            sum_e_a = sum(e*a for e, a in zip(eta, STATE))
+
+            if VERBOSE >= 2:
+                print(
+                    i,
+                    sqrt(sum(e*e for e in eta)/r).n(),
+                    sum_e_a,
+                    sum(e*y for e, y in zip(eta, y_)),
+                    sum(e*z for e, z in zip(eta, z_))
+                )
+
+            if sum_e_a != 0:
+                if i >= expect_vectors:
+                    break
+                raise ValueError(r"we need `\sum_i \eta_i A_i = 0`")
+            ETA.append(eta)
+
+        ETAs.append(ETA)
 
 if VERBOSE >= 2:
     print()
 
-ETA_m = IntegerMatrix.from_matrix(ETA, int_type='mpz')
-LLL.reduction(ETA_m)
-ETA = [list(b) for b in ETA_m if any(list(b))]
-if USE_SUBS:
-    ETA_m1 = IntegerMatrix.from_matrix(ETA1, int_type='mpz')
-    LLL.reduction(ETA_m1)
-    ETA1 = [list(b) for b in ETA_m1 if any(list(b))]
-
 if SOL is not None:
-    assert len(ETA) >= expect_vectors, f"rank ETA: {len(ETA)}"
-    if USE_SUBS:
-        assert len(ETA1) >= expect_vectors, f"rank ETA': {len(ETA1)}"
+    for ETA in ETAs:
+        if len(ETA) < expect_vectors:
+            raise RuntimeError(f"rank ETA: {len(ETA)}")
+
 
 M = Matrix(ZZ, r+t-1, t*expect_vectors)
 if USE_SUBS:
     M1 = Matrix(ZZ, r+t-1, t*expect_vectors)
-for j in range(t):
-    for i in range(r):
-        for a in range(expect_vectors):
-            M[j+i, expect_vectors*j+a] = ETA[a][i]
-            if USE_SUBS:
-                M1[j+i, expect_vectors*j+a] = ETA1[a][i]
+for j, i, a in itertools.product(
+        range(t), range(r), range(expect_vectors)):
+    M[j+i, expect_vectors*j+a] = ETAs[0][a][i]
+    if USE_SUBS:
+        M1[j+i, expect_vectors*j+a] = ETAs[1][a][i]
 B = M.left_kernel(basis="LLL").basis_matrix()
 if USE_SUBS:
     B1 = M1.left_kernel(basis="LLL").basis_matrix()
@@ -224,7 +231,7 @@ if VERBOSE >= 1:
 if DEBUG and input('embed? '):
     IPython.embed()
     if input("exit? "):
-        exit(int(0))
+        sys.exit(int(0))
 
 assert nrows == 2, r"some `\eta` are wrong"
 if USE_SUBS:
@@ -263,7 +270,7 @@ if USE_SUBS:
         print("cannot find `z_i`")
         if DEBUG and input('embed? '):
             IPython.embed()
-        exit(int(-1))
+        sys.exit(int(-1))
 else:
     b = B[0]
     if b[0] < 0:
@@ -275,13 +282,13 @@ if SOL is not None:
     if not res:
         if DEBUG and input('embed? '):
             IPython.embed()
-        exit(int(-1))
+        sys.exit(int(-1))
 else:
     if min(b) >= 0 and max(b) < 2**zbits:
         print("maybe")
     else:
         print(f"False :: range {min(b)}, {max(b)}")
-        exit(int(-1))
+        sys.exit(int(-1))
 
 a_ = [int(2**zbits*y + z) for y, z in zip(y_, b)]
 
@@ -299,7 +306,7 @@ if SOL is not None:
     if DEBUG and input('embed? '):
         IPython.embed()
     if not res:
-        exit(int(-1))
+        sys.exit(int(-1))
 else:
     Q = Q1.change_ring(ZZ)
     c_ = []
@@ -308,7 +315,7 @@ else:
             entry = 1 if i == j+1 else 0
             if Q[i, j] != entry:
                 print("False")
-                exit(int(-1))
+                sys.exit(int(-1))
         c_.append(int(Q[i, n-1]))
     print("True")
 
