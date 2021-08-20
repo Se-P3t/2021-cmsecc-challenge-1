@@ -13,7 +13,7 @@ from fpylll import FPLLL, IntegerMatrix, BKZ
 
 from util import read_data, save_solution, matrix_overview, str_mat
 from hlll import hlll_wrapper
-from sieve_asvp import solve_asvp
+from lattice import Lattice
 
 
 parser = argparse.ArgumentParser(description=__doc__,
@@ -228,10 +228,10 @@ Bs = [left_kernel_lll(M, r-t, KK) for M in Ms]
 
 try:
     for i, B in enumerate(Bs):
-        B = IntegerMatrix.from_matrix(B)
-        BKZ.reduction(B,BKZ.EasyParam(block_size=args.block_size, flags=bkz_flags))
+        B = Lattice.from_matrix(B)
+        B.run_bkz(block_size=args.block_size, verbose=VERBOSE >= 5)
         if args.sieve:
-            B = solve_asvp(B, **sieve_param)
+            B = sieve(**sieve_param)
         Bs[i] = B
 except KeyboardInterrupt:
     IPython.embed()
