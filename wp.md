@@ -34,7 +34,7 @@ $$
 -1 \\ z_0 \\ \vdots \\ z_{n-1} \\ k_n \\ \vdots \\ k_{d-1}
 \end{pmatrix}^T
 &\cdot \begin{pmatrix}
-1 & & & &c_n &\cdots &c_{d-1} \\
+\quad 1 &\quad & &\quad &c_n &\cdots &c_{d-1} \\
 &1 & & &q_{n,0} &\cdots &q_{d-1,0} \\
 & &\ddots & &\vdots &\cdots &\vdots \\
 & & &1 &q_{n,n-1} &\cdots &q_{d-1,n-1} \\
@@ -42,7 +42,7 @@ $$
 & & & & &\ddots & \\
 & & & & & &m \\
 \end{pmatrix} \\
-&= \begin{pmatrix} -1 &z_0 &\ldots &z_{n-1} &z_n &\ldots &z_{d-1}\end{pmatrix}
+&= \begin{pmatrix} -1 &z_0 &\ldots &z_{n-1} &z_n &\quad\ldots &\quad z_{d-1}\end{pmatrix}
 \end{aligned}
 $$
 
