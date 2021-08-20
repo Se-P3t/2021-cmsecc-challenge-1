@@ -7,6 +7,7 @@ import time
 import random
 
 from fpylll import IntegerMatrix, LLL, BKZ
+from fpylll.algorithms.bkz2 import BKZReduction as BKZ2
 from fpylll.util import gaussian_heuristic, ReductionError
 
 from g6k.algorithms.pump import pump
@@ -156,6 +157,21 @@ class Lattice(IntegerMatrix):
 
         BKZ.reduction(self, par, float_type=float_type, precision=prec)
 
+
+    def run_bkz2(self, block_size=20, verbose=False):
+        """
+        Args:
+            block_size (int, optional): Defaults to 20.
+            verbose (bool, optional): Defaults to False.
+        """
+        bkz_flags = BKZ.DEFAULT | BKZ.AUTO_ABORT
+        if verbose:
+            bkz_flags |= BKZ.VERBOSE
+        par = BKZ.EasyParam(block_size=block_size, flags=bkz_flags)
+
+        _ = BKZ2(self)(par)
+
+
     def __asvp_kernel(self, params):
         """
         TODO
@@ -203,7 +219,7 @@ class Lattice(IntegerMatrix):
 
         return tracer.trace
 
-    def solve_asvp(self, threads=1, seed=None, **kwds):
+    def sieve(self, threads=1, seed=None, **kwds):
         """
         A G6K Approx-SVP Solver
 
