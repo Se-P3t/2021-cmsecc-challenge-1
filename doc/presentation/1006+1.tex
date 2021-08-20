@@ -1,0 +1,465 @@
+\documentclass[10pt,compress]{beamer}
+\RequirePackage{geometry}
+\geometry{paperheight=9cm,paperwidth=16cm}
+
+\usetheme{metropolis} % https://github.com/matze/mtheme
+\setbeamertemplate{bibliography item}[text]
+\setbeamercovered{transparent}
+
+\usepackage{metropolis_framesubtitle}
+\definecolor{black}{HTML}{000000}
+\setbeamercolor{frametitle}{bg=black}
+\setbeamercolor{framesubtitle}{fg=black, bg=normal text.bg}
+
+\usepackage[UTF8]{ctex}
+\usepackage{xspace}
+%\usepackage{comment}
+\usepackage{amsmath,amsfonts,amssymb,amsthm}
+%\usepackage{graphicx}
+%\usepackage{listings}
+
+
+
+\newcommand{\Z}{\ensuremath{\mathbb{Z}}\xspace}
+\newcommand{\LSB}[2]{\ensuremath{\textnormal{LSB}_{#1}\left(#2\right)}\xspace}
+\newcommand{\MSB}[2]{\ensuremath{\textnormal{MSB}_{#1}\left(#2\right)}\xspace}
+\newcommand{\bitlength}[1]{\ensuremath{\textnormal{bitlength}\left(#1\right)}\xspace}
+\newcommand{\mat}[1]{\mathbf{#1}\xspace}
+\newcommand{\leftkernel}[1]{\ensuremath{\textnormal{Ker}_{\textnormal{left}}\left(#1\right)}\xspace}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\norminf}[1]{\left\lVert#1\right\rVert_\infty}
+
+\renewcommand{\vec}[1]{\overrightarrow{\mathbf{#1}}\xspace}
+
+%\newcommand{\code}{\lstinline}
+
+
+%\lstdefinelanguage{Sage}[]{Python}{
+%  morekeywords={True,False,sage},
+%  sensitive=true
+%}
+%
+%\lstset{
+%  frame=none,
+%  showtabs=False,
+%  showspaces=False,
+%  showstringspaces=False,
+%  language = Sage,
+%  basicstyle={\tt}
+%}
+
+
+\usepackage[
+  backend=bibtex,
+  style=alphabetic,
+  maxnames=4,
+  citestyle=alphabetic
+]{biblatex}
+
+\addbibresource{refs.bib}
+
+
+\AtBeginSection[] {
+  \begin{frame}
+    \frametitle{目录}
+    \tableofcontents[sectionstyle=show/shaded,subsectionstyle=show/shaded]
+  \end{frame}
+}
+
+
+\title{第六届(2021年)全国高校密码数学挑战赛}
+\subtitle{赛题一：环上序列的截位还原}
+\author{方佳乐 @$\href{https://github.com/Se-P3t}{Se\_P3t}$\\
+ 指导老师: 钟华}
+\institute{杭州电子科技大学\, 通信工程学院\\
+ 信息安全协会\, \texttt{@Vidar-Team}}
+\date{2021年8月23日}
+
+\begin{document}
+
+\begin{frame}
+  \maketitle
+\end{frame}
+
+\setcounter{tocdepth}{1}
+\begin{frame}
+  \frametitle{目录}
+  \tableofcontents
+\end{frame}
+
+
+
+\section{赛题介绍}
+
+\begin{frame}{基本概念}
+  \begin{block}{环上序列的截位还原问题}
+    对于一个在整数剩余类环 $\Z / (m)$ 上的 $n$ 阶本原多项式 $f(x) = x^n - c_{n-1} x^{n-1} - \cdots - c_1 x - c_0$, 其对应的线性递归生成器定义为
+    $$
+    a_{i+n} = c_{n-1} a_{i+n-1} + c_{n-2} a_{i+n-2} + \cdots + c_0 a_i \bmod{m}
+    $$
+    其中 $a_i$ 为生成器的内部状态. 令 $a_i = 2^k y_i + z_i$ 且 $z_i = \LSB{k}{a_i} = a_i \bmod 2^k$, 那么该生成器的截位高 $\bitlength{m} - k$ 比特的输出为 $y_i$. 环上序列的截位还原问题定义为: \\
+    给出生成器的一段长为 $d$ 的连续的截位输出 $y_0, y_1, \ldots, y_{d-1}$, 求出初态 $a_0, a_1, \ldots, a_{n-1}$.
+  \end{block}
+\end{frame}
+
+\begin{frame}{赛题描述}
+  \begin{description}
+    \item[第一类挑战] 在 \underline{模数 $m$, 本原多项式 $f(x)$} 均已知的条件下, 求解环上序列的截位还原问题.
+    \item[第二类挑战] 在 \underline{级数 $n$, 模数 $m$} 均已知的条件下, 求解环上序列的截位还原问题.
+    \item[第三类挑战] 在 \underline{级数 $n$ 和 $m$ 的比特数} 均已知的条件下, 求解环上序列的截位还原问题.
+  \end{description}
+\end{frame}
+
+
+
+\section{赛题分析}
+
+\begin{frame}{赛题分析: 第一类挑战}
+  Sun 等人在 \cite[Section 3.5]{Sun2020} 中将生成器内部状态之间的关系转换成一组 \underline{线性同余方程组}, 并考虑使用 Frieze 等人 \cite{Frieze1988} 的理论求解初态.
+  \medbreak
+  \pause
+  令
+  $$
+  \mat{Q} = \begin{pmatrix}
+    0 &\cdots &0 &c_0 \\
+    1 &\cdots &0 &c_1 \\
+    \vdots &\ddots &\vdots &\vdots \\
+    0 &\cdots &0 &c_{n-1}
+  \end{pmatrix},
+  $$
+  \smallbreak
+  \pause
+  则有 $\left(a_{i+j}, a_{i+j+1}, \ldots, a_{i+j+n-1}\right) = \left(a_i, a_{i+1}, \ldots, a_{i+n-1}\right) \mat{Q}^j \bmod{m}$
+\end{frame}
+
+\begin{frame}{赛题分析: 第一类挑战}
+  设 $\mat{Q}^j$ 的第一列为 $\left(q_{j,0}, q_{j,1}, \ldots, q_{j,n-1}\right)^T$, 有任一状态 $a_j$ 关于初态的线性同余关系式:
+  $$
+  a_j = \sum_{l=0}^{n-1} q_{j,l} a_l \bmod{m}.
+  $$
+  \pause
+  现给出截位高 $\bitlength{m} - k$ 比特输出 $y_i$, 代入得:
+  $$
+  c_j := 2^k \left(y_j - \sum_{l=0}^{n-1} q_{j,l} y_l\right) \bmod{m} \equiv \sum_{l=0}^{n-1} q_{j,l} z_l - z_j \pmod{m},
+  $$
+  其中 $0 \leq z_i < 2^k$.
+\end{frame}
+
+\begin{frame}{赛题分析: 第一类挑战}
+  我们基于该线性同余方程组, 考虑了以下优化:
+  \begin{itemize}
+    \pause
+    \item 利用嵌入技术转化成最短向量问题
+    \pause
+    \item 使用更高级的格基约化算法, 如 BKZ 算法
+    \pause
+    \item 调用筛法 \href{https://github.com/fplll/g6k}{G6K} 与 \href{https://github.com/WvanWoerden/G6K-GPU-Tensor}{G6K-GPU}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{赛题分析: 第二,三类挑战}
+  Sun 等人的解法不适用于第二类挑战, 在其研究基础上, 我们发现了关于初态的 \underline{新的线性关系}, 并由此提出一种基于零空间的解法能够直接求出初态.
+  \bigbreak
+  \pause
+  对于第三类挑战, 由于格基维数过大, 我们只能求出前三级挑战.
+\end{frame}
+
+
+
+\section{解题思路}
+
+\begin{frame}{解题思路: 第一类挑战}
+  首先, 我们应用 Kannan 的嵌入技术 \cite{Kannan1987} 将其转换成 SVP 问题:
+  \medbreak
+  \pause
+  $$
+  \begin{aligned}
+    \begin{pmatrix}
+      -1 \\ z_0 \\ \vdots \\ z_{n-1} \\ k_n \\ \vdots \\ k_{d-1}
+    \end{pmatrix}^T
+    &\cdot
+    \begin{pmatrix}
+      \quad 1 &\quad &\quad &\quad &c_n &\cdots &c_{d-1} \\
+      &1 & & &q_{n,0} &\cdots &q_{d-1,0} \\
+      & &\ddots & &\vdots &\cdots &\vdots \\
+      & & &1 &q_{n,n-1} &\cdots &q_{d-1,n-1} \\
+      & & & &m & & \\
+      & & & & &\ddots & \\
+      & & & & & &m \\
+    \end{pmatrix} \\
+    &=
+    \begin{pmatrix}
+      -1 &z_0 &\ldots &z_{n-1} &z_n &\quad\ldots &\quad z_{d-1}
+    \end{pmatrix}
+  \end{aligned}
+  $$
+\end{frame}
+
+\begin{frame}{解题思路: 第一类挑战}
+  注意到目标向量中 $z_j$ 均大于等于零, 因此我们可以先进行换元以减少目标向量的长度一比特.\\
+  \pause
+  令 $\hat{z_j} = z_j - 2^{k-1}$, 则有 $\hat{z_j} \in \left[-2^{k-1}, 2^{k-1}\right)$.
+  \medbreak
+  \pause
+  $$
+  \begin{aligned}
+    \begin{pmatrix}
+      -1 \\ z_0 \\ \vdots \\ z_{n-1} \\ k_n \\ \vdots \\ k_{d-1}
+    \end{pmatrix}^T
+    &\cdot
+    \begin{pmatrix}
+      \quad 1 &2^{k-1} &\cdots &2^{k-1} &c_n+2^{k-1} &\cdots &c_{d-1}+2^{k-1} \\
+      &1 & & &q_{n,0} &\cdots &q_{d-1,0} \\
+      & &\ddots & &\vdots &\cdots &\vdots \\
+      & & &1 &q_{n,n-1} &\cdots &q_{d-1,n-1} \\
+      & & & &m & & \\
+      & & & & &\ddots & \\
+      & & & & & &m \\
+    \end{pmatrix} \\
+    &=
+    \begin{pmatrix}
+      -1 &\;\hat{z_0} &\quad\ldots &\space\hat{z_{n-1}} &\quad\hat{z_n} &\qquad\ldots &\qquad \hat{z_{d-1}}
+    \end{pmatrix}
+  \end{aligned}
+  $$
+\end{frame}
+
+\begin{frame}{解题思路: 第一类挑战}
+  最后, 根据目标向量预期大小, 我们可以取放缩因子为 $(m, \alpha, \ldots, \alpha)$, 其中 $\alpha = \lfloor m/2^{k-1}\rfloor$.
+  \medbreak
+  \pause
+  $$
+  \text{基矩阵}\, \mat{B} =
+  \begin{pmatrix}
+    m &m &\cdots &m &\alpha\left(c_n+2^{k-1}\right) &\cdots &\alpha\left(c_{d-1}+2^{k-1}\right) \\
+    &1 & & &\alpha q_{n,0} &\cdots &\alpha q_{d-1,0} \\
+    & &\ddots & &\vdots &\cdots &\vdots \\
+    & & &1 &\alpha q_{n,n-1} &\cdots &\alpha q_{d-1,n-1} \\
+    & & & &\alpha m & & \\
+    & & & & &\ddots & \\
+    & & & & & &\alpha m \\
+  \end{pmatrix}
+  $$
+\end{frame}
+
+\begin{frame}{解题思路: 第二,三类挑战}
+  对于第二,三类挑战, 本原多项式未被给出, 因此我们无法利用之前的线性方程组. \\
+  \bigbreak
+  \pause
+  Sun 等人考虑通过已知的截位输出 $y_i$ 获得关于内部状态 $a_i$ 的新的线性关系 \cite[Section 3.1]{Sun2020}:
+  $$
+  \sum_{i=0}^{r-1} \eta_i a_{j+i} = \sum_{i=0}^{r-1} \eta_i y_{j+i} = 0 \quad\left(j=0,1,\ldots,t-1\right)
+  $$
+\end{frame}
+
+\begin{frame}{解题思路: 第二,三类挑战}
+  对于 $d$ 组符合上述条件的向量 $\vec{\eta} = {\eta_0, \eta_1, \ldots, \eta_{r-1}}$, 我们构造如下 $(r+t-1)\times td$ 的矩阵:
+  $$
+  \mat{M} =
+  \begin{pmatrix}
+    \eta_0^{(0)} &\cdots &\eta_0^{(d-1)} & & & & \\
+    \vdots &\cdots &\vdots &\ddots & & & \\
+    \eta_{r-1}^{(0)} &\cdots &\eta_{r-1}^{(d-1)} &\ddots &\eta_0^{(0)} &\cdots &\eta_0^{(d-1)} \\
+     & & &\ddots &\vdots &\cdots &\vdots \\
+     & & & &\eta_{r-1}^{(0)} &\cdots &\eta_{r-1}^{(d-1)}
+  \end{pmatrix}
+  $$
+  \pause
+  显然, 向量 $\vec{y} = {y_0, y_1, \ldots, y_{r+t-2}}$ 与向量 $\vec{z} = {z_0, z_1, \ldots, z_{r+t-2}}$ 满足
+  $$
+  \vec{y} \mat{M} = \vec{z} \mat{M} = \vec{0}
+  $$
+  即, $\vec{y}, \vec{z} \in \leftkernel{\mat{M}}$.
+\end{frame}
+
+\begin{frame}{解题思路: 第二,三类挑战}
+  现在我们考虑由矩阵 $\mat{M}$ 的左核 $\leftkernel{\mat{M}}$ 生成的格 $L$. 一般的, 当 $d>(r+t-1)/t$ 时, $\mat{M}$ 的零空间维数恰为 2, 即格 $L$ 的一组基为 $\{\vec{y}, \vec{z}\}$. \\
+  \pause
+  设 $\mat{B}$ 为格 $L$ 的 LLL 规约基, $\text{ybit} = \max{\bitlength{y_i}}$, $\text{zbit} = \max{\bitlength{z_i}}$. 我们分以下四种情况讨论:
+  \begin{itemize}
+    \item zbit < ybit
+    \item ybit $\leq$ zbit < ybit + 2
+    \item zbit > ybit + 2
+    \item zbit = ybit + 2
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{解题思路: 第二,三类挑战}{zbit < ybit}
+  格维数为 2, 且 $\norm{\vec{z}} \ll \norm{\vec{y}}$, 那么经过 LLL 规约后, 有
+  $$
+  \mat{B}[0] = \vec{z}
+  $$
+\end{frame}
+
+\begin{frame}{解题思路: 第二,三类挑战}{ybit $\leq$ zbit < ybit + 2}
+  对输出进行代换: 取 $\vec{y'} = 2\vec{y}+1$, 则有 $\vec{z'} = \left(z_0-2^{\text{zbit}-1}, \ldots, z_{r+t-1}-2^{\text{zbit}-1}\right)$, 同上求出多组 $\vec{\eta'}$ 构造矩阵 $\mat{M'}$ 并设 $\leftkernel{\mat{M'}}$ 生成的格 $L'$ 的 LLL 规约基为 $\mat{B'}$. \\
+  \bigbreak
+  \pause
+  相应地, 我们有 $\bitlength{\norminf{\vec{y'}}} = \text{ybit} + 1$, $\bitlength{\norminf{\vec{z'}}} = \text{zbit} - 1$, \\
+  \medbreak
+  即 $\norm{\vec{z'}} \ll \norm{\vec{y'}}$, 亦即
+  $$
+  \mat{B'}[0] = \vec{z'}
+  $$
+\end{frame}
+
+\begin{frame}{解题思路: 第二,三类挑战}{zbit > ybit + 2}
+  此时 $\norm{\vec{y}} < \norm{\vec{z}}$, $\norm{\vec{y'}} < \norm{\vec{z'}}$ \\
+  \pause
+  存在一幺模矩阵 $\mat{U}$ 使得
+  $$
+  \mat{B} = \mat{U} \cdot
+  \begin{pmatrix}
+    \vec{y} \\
+    \vec{z}
+  \end{pmatrix}
+  $$
+  不失一般性, 我们有
+  $$
+  \mat{U} =
+  \begin{pmatrix}
+    1 & \\
+    k &\pm 1
+  \end{pmatrix},
+  $$
+  其中 $k \in \Z$. \\
+  \pause
+  综上, 我们有 $\{\vec{y}, \vec{z}+k_1\vec{y}, \vec{y'}, \vec{z'}+k_2\vec{y'}\}$
+\end{frame}
+
+\begin{frame}{解题思路: 第二,三类挑战}{zbit > ybit + 2}
+  我们有 $\{\vec{y}, \vec{z}+k_1\vec{y}, \vec{y'}, \vec{z'}+k_2\vec{y'}\}$ \\
+  \bigbreak
+  \bigbreak
+  \bigbreak
+  \pause
+  给最后一个向量加上 $\left(2^{\text{zbit}-1}, \ldots, 2^{\text{zbit}-1}\right)$ 得到 $\vec{z} + k_2\vec{y'}$. \\
+  \pause
+  注意到
+  $$
+  \vec{z} + k_2\vec{y'} = (\vec{z}+k_1\vec{y}) - k_1(\vec{y}) + k2(\vec{y'})
+  $$
+  所以我们可以求出 $k_1, k_2$, 最终获得 $\vec{z}$.
+\end{frame}
+
+\begin{frame}{解题思路: 第二,三类挑战}{zbit = ybit + 2}
+  挑战中并未出现该情形, 这里不做进一步讨论. \\
+  \pause
+  \bigbreak
+  \bigbreak
+  \begin{itemize}
+    \item 试试运气
+    \item 尝试其他代换
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{解题思路: 第二,三类挑战}
+  在求出初态后 \\
+  \begin{description}
+    \pause
+    \item[求模数 $m$] 计算 GCD 直到比特数一致
+    \pause 
+    \item[求系数 $c_i$] 获得 $n$ 组关于矩阵 $\mat{Q}$ 的等式, 在 $\Z / (m)$ 上求解
+  \end{description}
+\end{frame}
+
+
+
+\section{方案亮点}
+
+\begin{frame}{方案亮点}
+  \begin{itemize}
+    \pause
+    \item 第一类挑战转换成 SVP 问题, 简化了过程
+    \pause
+    \item 第二,三类挑战直接求出初态, 只需要一两次BKZ, 缩短了时间
+    \pause
+    \item 使用了 GPU-G6K, 与时俱进, 大幅缩短了时间
+    \pause
+    \item 代码完善, 提供了测试与验证代码, 方便进一步的研究
+    \pause
+    \item 封装了 lattice 与 meg 类, 简化了重复代码, 调用方便
+  \end{itemize}
+\end{frame}
+
+
+
+\section{研究成果}
+
+\begin{frame}{研究成果}{第一类挑战}
+  第一类挑战我们主要使用 FPyLLL \cite{fpylll} 中 BKZ 算法实现以及 G6K \cite{Albrecht2019a} 多核 CPU 筛法;
+  \pause
+  其中, 对于第七级挑战, 我们使用 GPU 筛法 \cite{Ducas2021}, 并在 Google Colab 上于两小时内求出结果. \\
+  \pause
+  具体解题时间如下:
+  \begin{table}
+    \begin{tabular}{l | c | c | c }
+      级数 &求解算法 &格基维数 &耗费时间 \\
+      \hline \hline
+      1 &HKZ &19 &<1s \\
+      2 &HKZ &20 &<1s \\
+      3 &BKZ-20 &31 &$\approx$1s \\
+      4 &BKZ-40 &52 &$\approx$1s \\
+      5 &BKZ-40 &74 &5.39s \\
+      6 &BKZ-30 + Sieve &121 &2m13s \\
+      7 &BKZ-20 + GPU Sieve &151 &99m4s
+    \end{tabular}
+    \caption{第一类挑战解题时间}
+  \end{table}
+\end{frame}
+
+\begin{frame}{研究成果}{第二类挑战}
+  在第二类挑战中, 我们提出了基于零空间的解法, 能够在数秒内求解出所有九级挑战. \\
+  \pause
+  \begin{table}
+    \begin{tabular}{l | c | c | c | c | c | c }
+      级数 &阶数 &zbits &r &t &BKZ block size &耗费时间 \\
+      \hline \hline
+      1 &2 &17 &30 &8 &20 &2.35s \\
+      2 &2 &23 &60 &15 &20 &2.9s \\
+      3 &3 &21 &68 &17 &20 &3.2s \\
+      4 &4 &21 &95 &25 &30 &7.8s \\
+      5 &5 &18 &85 &23 &30 &6.7s \\
+      6 &8 &11 &90 &20 &20 &4.4s \\
+      7 &10 &11 &110 &26 &20 &9.3s \\
+      8 &12 &8 &110 &28 &20 &4.65s \\
+      9 &14 &8 &128 &32 &32 &10.0s
+    \end{tabular}
+    \caption{第二类挑战解题时间}
+  \end{table}
+\end{frame}
+
+\begin{frame}{研究成果}{第三类挑战}
+  对于三类挑战, 由于维数过大和时间限制, 我们只能解出前三级挑战: \\
+  \pause
+  \begin{table}
+    \begin{tabular}{l | c | c | c | c | c | c | c }
+      级数 &阶数 &mbits &zbits &r &t &求解算法 &耗费时间 \\
+      \hline \hline
+      1 &16 &31 &5 &140 &30 &BKZ-20 &30.8s \\
+      2 &16 &31 &10 &190 &40 &BKZ-30 &1m14.8s \\
+      3 &16 &31 &14 &265 &70 &BKZ-30+Sieve &5m24.0s
+    \end{tabular}
+    \caption{第三类挑战解题时间}
+  \end{table}
+\end{frame}
+
+
+
+\begin{frame}{致谢}
+  \begin{center}
+    \Huge 谢\ 谢!
+  \end{center}
+\end{frame}
+
+
+
+\section{参考文献}
+
+\begin{frame}[allowframebreaks]{参考文献}
+  \nocite{*}
+  \printbibliography[heading=none]
+\end{frame}
+
+
+\end{document}
