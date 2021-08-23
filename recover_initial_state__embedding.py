@@ -152,7 +152,7 @@ if VERBOSE >= 2:
     print()
 
 # NOTE: r0 in `workout` is squared
-sieve_param['workout/goal_r0'] = (d + 1) * m ** 2
+sieve_param['workout/goal_r0'] = (d + 1) * (2**(zbits-1)) ** 2
 solver.L.sieve(**sieve_param)
 if DEBUG or VERBOSE >= 3:
     matrix_overview(solver.L)

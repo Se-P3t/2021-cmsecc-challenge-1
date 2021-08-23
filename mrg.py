@@ -200,17 +200,16 @@ class MRGSolver:
 
         y_ = self.outputs
         size = 1 << (self.zbits - 1)
-        scale = self.mrg.modulus >> (self.zbits - 1)
         Q_ = self.mrg.gen_qji(self.length)
 
         indices = random.sample(range(self.mrg.degree, self.length), d - self.mrg.degree)
 
         A = Lattice(d + 1, d + 1, int_type="mpz")
 
-        A[0, 0] = size * scale
+        A[0, 0] = size
         for j in range(self.mrg.degree):
-            A[0, j+1] = size * scale
-            A[j+1, j+1] = 1 * scale
+            A[0, j+1] = size
+            A[j+1, j+1] = 1
 
         for j in range(d - self.mrg.degree):
             idx = indices[j]
@@ -220,11 +219,11 @@ class MRGSolver:
                 int(Q_[idx][l])*y_[l] for l in range(self.mrg.degree)
             )) % self.mrg.modulus
 
-            A[col, col] = self.mrg.modulus * scale
-            A[0, col] = (c_j + 2**(self.zbits-1)) * scale
+            A[col, col] = self.mrg.modulus
+            A[0, col] = c_j + 2**(self.zbits-1)
 
             for i in range(self.mrg.degree):
-                A[i+1, col] = int(Q_[idx][i]) * scale
+                A[i+1, col] = int(Q_[idx][i])
 
         self.L = A
 
@@ -286,15 +285,14 @@ class MRGSolver:
         """
         zbits = self.zbits
         size = 1 << (zbits - 1)
-        scale = self.mrg.modulus >> (zbits - 1)
 
-        if abs(sol[0]) != size * scale:
+        if abs(sol[0]) != size:
             return None
 
-        if sol[0] == size * scale:
+        if sol[0] == size:
             sol = [-sol_i for sol_i in sol]
 
-        z_ = tuple(int(sol_i/scale) + size for sol_i in sol[1:self.mrg.degree+1])
+        z_ = tuple(int(sol_i) + size for sol_i in sol[1:self.mrg.degree+1])
         if max(z_) >= 2**zbits:
             return None
 
@@ -319,11 +317,9 @@ class MRGSolver:
             int:
         """
         size = 1 << (zbits - 1)
-        scale = m >> (zbits - 1)
 
-        vol = size * scale
-        vol *= scale ** n
-        vol *= (m * scale) ** (d - n)
+        vol = size
+        vol *= m ** (d - n)
 
         return vol
 
@@ -367,9 +363,8 @@ class MRGSolver:
         mpmath.mp.prec = prec
 
         size = 1 << (zbits - 1)
-        scale = m >> (zbits - 1)
 
-        return mpmath.sqrt(((size * scale)**2 + d * m ** 2) / 12)
+        return mpmath.sqrt(((d + 1) * size ** 2) / 12)
 
     @classmethod
     def mvf(cls, m, zbits, d, prec=53):
@@ -388,6 +383,5 @@ class MRGSolver:
         mpmath.mp.prec = prec
 
         size = 1 << (zbits - 1)
-        scale = m >> (zbits - 1)
 
-        return mpmath.sqrt((size * scale)**2 + d * m ** 2)
+        return mpmath.sqrt((d + 1) * size ** 2)

@@ -48,32 +48,32 @@ $$
 
 bound of $z_i$: $z = 2^k > z_i \geq 0$
 
-scale: $\left(m, m/z, \ldots, m/z, m/z, \ldots, m/z\right)$
+scale: $\left(z, 1, \ldots, 1\right)$
 
 dim: $d+1$
 
 norm of target vector:
 
 $$
-||v||_2 = \sqrt{m^2 + \sum_{i=0}^{d-1} (z_i \cdot \frac{m}{z})^2} < \sqrt{d+1} m
+||v||_2 = \sqrt{z^2 + \sum_{i=0}^{d-1} z_i^2} < \sqrt{d+1} z
 $$
 
 determinant of basis matrix:
 
 $$
-det(L) = \frac{m^{2d-n+1}}{z^d}
+det(L) = z m^{d-n}
 $$
 
 expected $\lambda_1$ according to the Gaussian heuristic:
 
 $$
-gh(L) \approx \sqrt{\frac{dim}{2\pi e}} det(L)^{1/dim} = \sqrt{\frac{d+1}{2\pi e}} z^{-d/(d+1)} m^{1+\frac{d-n}{d+1}}
+gh(L) \approx \sqrt{\frac{dim}{2\pi e}} det(L)^{1/dim} = \sqrt{\frac{d+1}{2\pi e}} z^{1/(d+1)} m^{\frac{d-n}{d+1}}
 $$
 
 norm of the first LLL-reduced ($\delta = 3/4$) vector:
 
 $$
-||b_1||_2 \leq 2^{(dim-1)/4} det(L)^{1/dim} = 2^{d/4} z^{-d/(d+1)} m^{1+\frac{d-n}{d+1}}
+||b_1||_2 \leq 2^{(dim-1)/4} det(L)^{1/dim} = 2^{d/4} z^{1/(d+1)} m^{\frac{d-n}{d+1}}
 $$
 
 expected norm of the shortest vector found by BKZ-$\beta$:
